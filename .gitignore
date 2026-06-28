@@ -1,0 +1,40 @@
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE/editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Go build artifacts
+bin/
+dist/
+build/
+tmp/
+*.exe
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Go test/coverage artifacts
+coverage/
+coverage.out
+*.cover
+
+# Dependency/cache directories
+vendor/
+
+# Logs
+*.log
+
+# Docker/local overrides
+docker-compose.override.yml
