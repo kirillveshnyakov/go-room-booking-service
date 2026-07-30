@@ -132,31 +132,100 @@ components:
           format: date-time
           nullable: true
 
+    ScheduleRule:
+      type: object
+      additionalProperties: false
+      required:
+        - dayOfWeek
+        - startTime
+        - endTime
+      properties:
+        dayOfWeek:
+          type: integer
+          minimum: 1
+          maximum: 7
+          description: "День недели: 1=Пн, 7=Вс"
+          example: 1
+
+        startTime:
+          type: string
+          pattern: "^(?:[01][0-9]|2[0-3]):[0-5][0-9]$"
+          description: Время начала доступности в формате HH:MM, UTC
+          example: "09:00"
+
+        endTime:
+          type: string
+          pattern: "^(?:[01][0-9]|2[0-3]):[0-5][0-9]$"
+          description: Время окончания доступности в формате HH:MM, UTC
+          example: "18:00"
+
+    CreateScheduleRequest:
+      type: object
+      additionalProperties: false
+      required:
+        - rules
+      properties:
+        rules:
+          type: array
+          minItems: 1
+          maxItems: 7
+          description: >
+            Правила доступности переговорки. Для одного дня недели
+            допускается не более одного правила.
+          items:
+            $ref: '#/components/schemas/ScheduleRule'
+      example:
+        rules:
+          - dayOfWeek: 1
+            startTime: "09:00"
+            endTime: "18:00"
+          - dayOfWeek: 2
+            startTime: "10:00"
+            endTime: "18:00"
+          - dayOfWeek: 5
+            startTime: "09:00"
+            endTime: "16:00"
+
     Schedule:
       type: object
-      required: [roomId, daysOfWeek, startTime, endTime]
+      additionalProperties: false
+      required:
+        - id
+        - roomId
+        - rules
+        - createdAt
       properties:
         id:
           type: string
           format: uuid
+
         roomId:
           type: string
           format: uuid
-        daysOfWeek:
+
+        rules:
           type: array
+          minItems: 1
+          maxItems: 7
           items:
-            type: integer
-            minimum: 1
-            maximum: 7
-          description: "1=Пн .. 7=Вс, дни доступности. Каждое значение должно быть в диапазоне 1–7."
-        startTime:
+            $ref: '#/components/schemas/ScheduleRule'
+
+        createdAt:
           type: string
-          pattern: "^([01]?[0-9]|2[0-3]):[0-5][0-9]$"
-          description: Время начала (HH:MM) в рамках дня. Интерпретируется как UTC.
-        endTime:
-          type: string
-          pattern: "^([01]?[0-9]|2[0-3]):[0-5][0-9]$"
-          description: Время окончания (HH:MM) в рамках дня. Интерпретируется как UTC.
+          format: date-time
+          description: Время создания расписания в UTC
+
+      example:
+        id: "87fba58c-6073-4db7-b784-fb9a94293441"
+        roomId: "e48d851a-72da-47c1-98cc-62fa114542ad"
+        rules:
+          - dayOfWeek: 1
+            startTime: "09:00"
+            endTime: "18:00"
+          - dayOfWeek: 2
+            startTime: "10:00"
+            endTime: "18:00"
+        createdAt: "2026-07-21T08:00:00Z"
 
     Slot:
       type: object
@@ -443,8 +512,15 @@ paths:
       summary: Создать расписание переговорки (только admin, только один раз). Длительность слота 30 мин. После создания расписание изменить нельзя.
       description: >
         Доступно только роли admin.
-        Расписание можно создать только один раз для каждой переговорки.
-        Поле `daysOfWeek` должно содержать значения от 1 до 7 (1=Пн, 7=Вс).
+
+        Для каждой переговорки расписание можно создать только один раз.
+        После создания расписание изменить нельзя.
+
+        Каждое правило задаёт день недели и отдельный временной
+        интервал доступности переговорки в этот день.
+
+        Для одного дня недели допускается не более одного правила.
+        Значение dayOfWeek должно находиться в диапазоне от 1 до 7 (1=Пн, 7=Вс).
         При передаче значений вне этого диапазона возвращается 400.
       security: [{ BearerAuth: [] }]
       parameters:
@@ -454,14 +530,17 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/Schedule'
+              $ref: '#/components/schemas/CreateScheduleRequest'
       responses:
         '201':
-          description: Расписание сохранено
+          description: Расписание создано
           content:
             application/json:
               schema:
                 type: object
+                additionalProperties: false
+                required:
+                  - schedule
                 properties:
                   schedule:
                     $ref: '#/components/schemas/Schedule'
