@@ -3,6 +3,7 @@ module github.com/kirillveshnyakov/go-room-booking-service/room-booking-service
 go 1.26.4
 
 require (
+	github.com/caarlos0/env/v10 v10.0.0
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/lib/pq v1.12.3

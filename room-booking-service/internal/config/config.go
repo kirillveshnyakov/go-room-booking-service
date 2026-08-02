@@ -3,6 +3,8 @@ package config
 import (
 	"fmt"
 	"net"
+
+	"github.com/caarlos0/env/v10"
 )
 
 type Config struct {
@@ -22,4 +24,10 @@ func (c *Config) ConstructPostgresURL() string {
 		net.JoinHostPort(c.PG.Host, c.PG.Port),
 		c.PG.DB,
 	)
+}
+
+func New() (*Config, error) {
+	var cfg Config
+	err := env.Parse(&cfg)
+	return &cfg, err
 }

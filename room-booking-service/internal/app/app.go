@@ -11,7 +11,7 @@ import (
 	"go.uber.org/zap"
 )
 
-func Run(logger *zap.Logger, cfg config.Config) {
+func Run(logger *zap.Logger, cfg *config.Config) {
 	ctx := context.Background()
 
 	poolCtx, cancel := context.WithTimeout(
