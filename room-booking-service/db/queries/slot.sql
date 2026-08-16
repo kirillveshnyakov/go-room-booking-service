@@ -4,14 +4,10 @@ INSERT INTO slots (room_id,
                    end_at)
 SELECT sqlc.arg(room_id),
        generated_slot.start_at,
-       generated_slot.end_at
+       generated_slot.start_at + INTERVAL '30 minutes'
 FROM unnest(
-             sqlc.arg(start_ats)::timestamptz[],
-             sqlc.arg(end_ats)::timestamptz[]
-     ) AS generated_slot (
-                          start_at,
-                          end_at
-    )
+             sqlc.arg(start_ats)::timestamptz[]
+     ) AS generated_slot(start_at)
 ON CONFLICT (room_id, start_at)
     DO NOTHING;
 

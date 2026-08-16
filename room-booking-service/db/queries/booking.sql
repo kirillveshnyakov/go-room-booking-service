@@ -41,7 +41,8 @@ SELECT id,
        created_at
 FROM bookings
 ORDER BY created_at DESC, id DESC
-LIMIT sqlc.arg(page_size) OFFSET sqlc.arg(offset);
+LIMIT sqlc.arg(page_limit)
+OFFSET sqlc.arg(page_offset);
 
 -- name: ListUserFutureBookings :many
 SELECT b.id   AS booking_id,
