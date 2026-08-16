@@ -114,7 +114,7 @@ components:
 
     Room:
       type: object
-      required: [id, name]
+      required: [id, name, capacity]
       properties:
         id:
           type: string
@@ -126,7 +126,7 @@ components:
           nullable: true
         capacity:
           type: integer
-          nullable: true
+          minimum: 1
         createdAt:
           type: string
           format: date-time
@@ -461,7 +461,7 @@ paths:
           application/json:
             schema:
               type: object
-              required: [name]
+              required: [name, capacity]
               properties:
                 name:
                   type: string
@@ -470,7 +470,7 @@ paths:
                   nullable: true
                 capacity:
                   type: integer
-                  nullable: true
+                  minimum: 1
       responses:
         '201':
           description: Переговорка создана
