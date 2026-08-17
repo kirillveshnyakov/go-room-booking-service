@@ -54,10 +54,6 @@ func (repo *scheduleRepository) Create(
 	ctx context.Context,
 	schedule entity.Schedule,
 ) (entity.Schedule, error) {
-	if err := schedule.Validate(); err != nil {
-		return entity.Schedule{}, err
-	}
-
 	err := repo.transactor.WithTx(ctx, func(ctx context.Context) error {
 		createdSchedule, err := repo.getQueries(ctx).CreateSchedule(ctx, schedule.RoomID)
 		if err != nil {
