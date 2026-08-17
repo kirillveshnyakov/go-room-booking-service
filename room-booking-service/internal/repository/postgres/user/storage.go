@@ -28,12 +28,12 @@ func NewUserRepository(db sqlcgen.DBTX) *userRepository {
 	}
 }
 
-func (p *userRepository) getQueries(ctx context.Context) *sqlcgen.Queries {
+func (repo *userRepository) getQueries(ctx context.Context) *sqlcgen.Queries {
 	if tx, err := transactor.ExtractTx(ctx); err == nil {
-		return p.queries.WithTx(tx)
+		return repo.queries.WithTx(tx)
 	}
 
-	return p.queries
+	return repo.queries
 }
 
 func (repo *userRepository) Create(
