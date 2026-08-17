@@ -37,7 +37,13 @@ func (s ScheduleRule) Validate() error {
 	return nil
 }
 
-func (s Schedule) Validate() error {
+func (s *Schedule) Normalize() {
+	s.CreatedAt = normalizeTime(s.CreatedAt)
+}
+
+func (s *Schedule) Validate() error {
+	s.Normalize()
+
 	if s.RoomID == uuid.Nil {
 		return errs.ErrScheduleRoomIDRequired
 	}

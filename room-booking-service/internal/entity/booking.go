@@ -16,7 +16,15 @@ type Booking struct {
 	CreatedAt      time.Time
 }
 
-func (b Booking) Validate() error {
+func (b *Booking) Normalize() {
+	b.Status = b.Status.Normalize()
+	b.ConferenceLink = normalizeText(b.ConferenceLink)
+	b.CreatedAt = normalizeTime(b.CreatedAt)
+}
+
+func (b *Booking) Validate() error {
+	b.Normalize()
+
 	if b.SlotID == uuid.Nil {
 		return errs.ErrBookingSlotIDRequired
 	}

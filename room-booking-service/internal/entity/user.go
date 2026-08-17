@@ -15,11 +15,19 @@ type User struct {
 	CreatedAt time.Time
 }
 
-func (u User) Validate() error {
+func (u *User) Normalize() {
+	u.Email = strings.ToLower(normalizeText(u.Email))
+	u.Role = u.Role.Normalize()
+	u.CreatedAt = normalizeTime(u.CreatedAt)
+}
+
+func (u *User) Validate() error {
+	u.Normalize()
+
 	if !u.Role.IsValid() {
 		return errs.ErrUserRoleInvalid
 	}
-	if strings.TrimSpace(u.Email) == "" {
+	if u.Email == "" {
 		return errs.ErrUserEmailRequired
 	}
 	return nil
@@ -30,6 +38,10 @@ type AuthUser struct {
 	PasswordHash string
 }
 
-func (u AuthUser) Validate() error {
+func (u *AuthUser) Normalize() {
+	u.User.Normalize()
+}
+
+func (u *AuthUser) Validate() error {
 	return u.User.Validate()
 }

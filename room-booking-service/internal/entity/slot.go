@@ -14,7 +14,14 @@ type Slot struct {
 	EndAt   time.Time
 }
 
-func (s Slot) Validate() error {
+func (s *Slot) Normalize() {
+	s.StartAt = normalizeTime(s.StartAt)
+	s.EndAt = normalizeTime(s.EndAt)
+}
+
+func (s *Slot) Validate() error {
+	s.Normalize()
+
 	if s.RoomID == uuid.Nil {
 		return errs.ErrSlotRoomIDRequired
 	}
