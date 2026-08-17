@@ -15,6 +15,7 @@ var (
 	ErrRoomNameAlreadyExists  = errors.New("room name already exists")
 
 	ErrSlotAlreadyBooked = errors.New("slot already booked")
+	ErrSlotOverlap       = errors.New("slot overlaps an existing slot")
 	ErrSlotInPast        = errors.New("slot is in past")
 
 	ErrUnauthorized = errors.New("unauthorized")
