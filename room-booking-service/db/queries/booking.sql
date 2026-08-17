@@ -54,8 +54,6 @@ SELECT b.id,
 FROM bookings AS b
          JOIN slots AS s
               ON b.slot_id = s.id
-         JOIN rooms AS r
-              ON r.id = s.room_id
 WHERE b.user_id = sqlc.arg(user_id)
   AND s.start_at >= NOW()
 ORDER BY s.start_at, b.id;

@@ -6,7 +6,8 @@ CREATE TABLE schedule_rules
     start_at    TIME    NOT NULL,
     end_at      TIME    NOT NULL,
 
-    PRIMARY KEY (schedule_id, day_of_week),
+    CONSTRAINT schedule_rules_unique_day
+        PRIMARY KEY (schedule_id, day_of_week),
 
     CONSTRAINT schedule_rules_schedule_id_fk
         FOREIGN KEY (schedule_id) REFERENCES schedules (id) ON DELETE CASCADE,

@@ -21,7 +21,7 @@ const (
 	scheduleRoomIDUnique       = "schedules_room_id_unique"
 	scheduleRoomIDFKConstraint = "schedules_room_id_fk"
 
-	scheduleRulesPrimaryKeyConstraint = "schedule_rules_pkey"
+	scheduleRulesPrimaryKeyConstraint = "schedule_rules_unique_day"
 	scheduleRulesScheduleFKConstraint = "schedule_rules_schedule_id_fk"
 	scheduleRulesDayValidConstraint   = "schedule_rules_day_valid"
 	scheduleRulesTimeValidConstraint  = "schedule_rules_time_valid"
