@@ -9,9 +9,9 @@ var (
 	ErrBookingNotFound  = errors.New("booking not found")
 	ErrScheduleNotFound = errors.New("schedule not found")
 
-	ErrEmailAlreadyExists    = errors.New("email already exists")
-	ErrScheduleAlreadyExists = errors.New("schedule already exists")
-	ErrRoomNameAlreadyExists = errors.New("room name already exists")
+	ErrUserEmailAlreadyExists = errors.New("user email already exists")
+	ErrScheduleAlreadyExists  = errors.New("schedule already exists")
+	ErrRoomNameAlreadyExists  = errors.New("room name already exists")
 
 	ErrSlotAlreadyBooked = errors.New("slot already booked")
 	ErrSlotInPast        = errors.New("slot is in past")

@@ -24,3 +24,12 @@ func (u User) Validate() error {
 	}
 	return nil
 }
+
+type AuthUser struct {
+	User         User
+	PasswordHash string
+}
+
+func (u AuthUser) Validate() error {
+	return u.User.Validate()
+}
