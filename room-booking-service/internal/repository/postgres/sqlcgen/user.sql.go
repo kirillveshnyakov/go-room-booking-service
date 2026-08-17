@@ -13,11 +13,9 @@ import (
 )
 
 const createUser = `-- name: CreateUser :one
-INSERT INTO users (email,
-                   role, password_hash)
+INSERT INTO users (email, password_hash)
 
 VALUES ($1,
-        'user',
         $2)
 RETURNING
     id,
