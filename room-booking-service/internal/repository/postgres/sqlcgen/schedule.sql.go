@@ -54,22 +54,32 @@ func (q *Queries) CreateScheduleRule(ctx context.Context, arg CreateScheduleRule
 }
 
 const getScheduleRuleForDay = `-- name: GetScheduleRuleForDay :one
-SELECT sr.schedule_id, sr.day_of_week, sr.start_at, sr.end_at
-FROM schedules s
-         JOIN schedule_rules AS sr
-              ON s.id = sr.schedule_id
-WHERE s.room_id = $1
-  AND sr.day_of_week = $2
+SELECT s.id AS schedule_id,
+       sr.day_of_week,
+       sr.start_at,
+       sr.end_at
+FROM schedules AS s
+         LEFT JOIN schedule_rules AS sr
+                   ON sr.schedule_id = s.id
+                       AND sr.day_of_week = $1
+WHERE s.room_id = $2
 `
 
 type GetScheduleRuleForDayParams struct {
-	RoomID    uuid.UUID
 	DayOfWeek int32
+	RoomID    uuid.UUID
 }
 
-func (q *Queries) GetScheduleRuleForDay(ctx context.Context, arg GetScheduleRuleForDayParams) (ScheduleRule, error) {
-	row := q.db.QueryRow(ctx, getScheduleRuleForDay, arg.RoomID, arg.DayOfWeek)
-	var i ScheduleRule
+type GetScheduleRuleForDayRow struct {
+	ScheduleID uuid.UUID
+	DayOfWeek  pgtype.Int4
+	StartAt    pgtype.Time
+	EndAt      pgtype.Time
+}
+
+func (q *Queries) GetScheduleRuleForDay(ctx context.Context, arg GetScheduleRuleForDayParams) (GetScheduleRuleForDayRow, error) {
+	row := q.db.QueryRow(ctx, getScheduleRuleForDay, arg.DayOfWeek, arg.RoomID)
+	var i GetScheduleRuleForDayRow
 	err := row.Scan(
 		&i.ScheduleID,
 		&i.DayOfWeek,

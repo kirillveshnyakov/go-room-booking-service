@@ -119,13 +119,6 @@ type Schedule struct {
 	CreatedAt pgtype.Timestamptz
 }
 
-type ScheduleRule struct {
-	ScheduleID uuid.UUID
-	DayOfWeek  int32
-	StartAt    pgtype.Time
-	EndAt      pgtype.Time
-}
-
 type Slot struct {
 	ID      uuid.UUID
 	RoomID  uuid.UUID

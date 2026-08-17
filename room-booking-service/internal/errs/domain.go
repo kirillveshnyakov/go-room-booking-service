@@ -3,11 +3,12 @@ package errs
 import "errors"
 
 var (
-	ErrUserNotFound     = errors.New("user not found")
-	ErrSlotNotFound     = errors.New("slot not found")
-	ErrRoomNotFound     = errors.New("room not found")
-	ErrBookingNotFound  = errors.New("booking not found")
-	ErrScheduleNotFound = errors.New("schedule not found")
+	ErrUserNotFound         = errors.New("user not found")
+	ErrSlotNotFound         = errors.New("slot not found")
+	ErrRoomNotFound         = errors.New("room not found")
+	ErrBookingNotFound      = errors.New("booking not found")
+	ErrScheduleNotFound     = errors.New("schedule not found")
+	ErrScheduleRuleNotFound = errors.New("schedule rule not found")
 
 	ErrUserEmailAlreadyExists = errors.New("user email already exists")
 	ErrScheduleAlreadyExists  = errors.New("schedule already exists")

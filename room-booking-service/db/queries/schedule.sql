@@ -14,9 +14,13 @@ VALUES (sqlc.arg(schedule_id),
         sqlc.arg(end_at));
 
 -- name: GetScheduleRuleForDay :one
-SELECT sr.schedule_id, sr.day_of_week, sr.start_at, sr.end_at
-FROM schedules s
-         JOIN schedule_rules AS sr
-              ON s.id = sr.schedule_id
+SELECT s.id AS schedule_id,
+       sr.day_of_week,
+       sr.start_at,
+       sr.end_at
+FROM schedules AS s
+         LEFT JOIN schedule_rules AS sr
+                   ON sr.schedule_id = s.id
+                       AND sr.day_of_week = sqlc.arg(day_of_week)
 WHERE s.room_id = sqlc.arg(room_id)
-  AND sr.day_of_week = sqlc.arg(day_of_week);
+;
