@@ -7,7 +7,7 @@ SELECT s.id,
        sqlc.narg(conference_link)
 FROM slots AS s
 WHERE s.id = sqlc.arg(slot_id)
-  AND s.start_at > NOW()
+  AND s.start_at >= NOW()
 RETURNING
     id,
     slot_id,
@@ -45,16 +45,12 @@ LIMIT sqlc.arg(page_limit)
 OFFSET sqlc.arg(page_offset);
 
 -- name: ListUserFutureBookings :many
-SELECT b.id   AS booking_id,
+SELECT b.id,
        b.slot_id,
        b.user_id,
        b.status,
        b.conference_link,
-       b.created_at,
-       s.start_at,
-       s.end_at,
-       r.id   AS room_id,
-       r.name AS room_name
+       b.created_at
 FROM bookings AS b
          JOIN slots AS s
               ON b.slot_id = s.id

@@ -154,14 +154,7 @@ func (repo *bookingRepository) ListUserFuture(
 
 	result := make([]entity.Booking, 0, len(bookings))
 	for _, booking := range bookings {
-		result = append(result, entity.Booking{
-			ID:             booking.BookingID,
-			SlotID:         booking.SlotID,
-			UserID:         booking.UserID,
-			Status:         entity.BookingStatus(booking.Status),
-			ConferenceLink: textFromPg(booking.ConferenceLink),
-			CreatedAt:      booking.CreatedAt.Time.UTC(),
-		})
+		result = append(result, bookingToEntity(booking))
 	}
 
 	return result, nil

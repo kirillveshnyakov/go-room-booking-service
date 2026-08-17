@@ -53,7 +53,7 @@ SELECT s.id,
        $2
 FROM slots AS s
 WHERE s.id = $3
-  AND s.start_at > NOW()
+  AND s.start_at >= NOW()
 RETURNING
     id,
     slot_id,
@@ -154,16 +154,12 @@ func (q *Queries) ListBookings(ctx context.Context, arg ListBookingsParams) ([]B
 }
 
 const listUserFutureBookings = `-- name: ListUserFutureBookings :many
-SELECT b.id   AS booking_id,
+SELECT b.id,
        b.slot_id,
        b.user_id,
        b.status,
        b.conference_link,
-       b.created_at,
-       s.start_at,
-       s.end_at,
-       r.id   AS room_id,
-       r.name AS room_name
+       b.created_at
 FROM bookings AS b
          JOIN slots AS s
               ON b.slot_id = s.id
@@ -174,39 +170,22 @@ WHERE b.user_id = $1
 ORDER BY s.start_at, b.id
 `
 
-type ListUserFutureBookingsRow struct {
-	BookingID      uuid.UUID
-	SlotID         uuid.UUID
-	UserID         uuid.UUID
-	Status         BookingStatus
-	ConferenceLink pgtype.Text
-	CreatedAt      pgtype.Timestamptz
-	StartAt        pgtype.Timestamptz
-	EndAt          pgtype.Timestamptz
-	RoomID         uuid.UUID
-	RoomName       string
-}
-
-func (q *Queries) ListUserFutureBookings(ctx context.Context, userID uuid.UUID) ([]ListUserFutureBookingsRow, error) {
+func (q *Queries) ListUserFutureBookings(ctx context.Context, userID uuid.UUID) ([]Booking, error) {
 	rows, err := q.db.Query(ctx, listUserFutureBookings, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	items := []ListUserFutureBookingsRow{}
+	items := []Booking{}
 	for rows.Next() {
-		var i ListUserFutureBookingsRow
+		var i Booking
 		if err := rows.Scan(
-			&i.BookingID,
+			&i.ID,
 			&i.SlotID,
 			&i.UserID,
 			&i.Status,
 			&i.ConferenceLink,
 			&i.CreatedAt,
-			&i.StartAt,
-			&i.EndAt,
-			&i.RoomID,
-			&i.RoomName,
 		); err != nil {
 			return nil, err
 		}

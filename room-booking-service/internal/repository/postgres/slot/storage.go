@@ -24,17 +24,14 @@ const (
 )
 
 type slotRepository struct {
-	queries    *sqlcgen.Queries
-	transactor transactor.Transactor
+	queries *sqlcgen.Queries
 }
 
 func NewSlotRepository(
 	db sqlcgen.DBTX,
-	transactor transactor.Transactor,
 ) *slotRepository {
 	return &slotRepository{
-		queries:    sqlcgen.New(db),
-		transactor: transactor,
+		queries: sqlcgen.New(db),
 	}
 }
 
