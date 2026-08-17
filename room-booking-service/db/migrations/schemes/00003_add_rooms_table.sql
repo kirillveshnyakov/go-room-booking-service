@@ -3,7 +3,7 @@ CREATE TABLE rooms
 (
     id          UUID PRIMARY KEY     DEFAULT gen_random_uuid(),
     name        TEXT        NOT NULL,
-    description TEXT,
+    description TEXT        NOT NULL DEFAULT '',
     capacity    INTEGER     NOT NULL,
     created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW(),
 

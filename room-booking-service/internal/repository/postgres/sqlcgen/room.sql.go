@@ -9,7 +9,6 @@ import (
 	"context"
 
 	"github.com/google/uuid"
-	"github.com/jackc/pgx/v5/pgtype"
 )
 
 const createRoom = `-- name: CreateRoom :one
@@ -29,7 +28,7 @@ VALUES ($1,
 
 type CreateRoomParams struct {
 	Name        string
-	Description pgtype.Text
+	Description string
 	Capacity    int32
 }
 

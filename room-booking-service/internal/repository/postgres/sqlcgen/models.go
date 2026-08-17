@@ -108,7 +108,7 @@ type Booking struct {
 type Room struct {
 	ID          uuid.UUID
 	Name        string
-	Description pgtype.Text
+	Description string
 	Capacity    int32
 	CreatedAt   pgtype.Timestamptz
 }

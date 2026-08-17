@@ -114,7 +114,7 @@ components:
 
     Room:
       type: object
-      required: [id, name, capacity]
+      required: [id, name, description, capacity]
       properties:
         id:
           type: string
@@ -123,7 +123,6 @@ components:
           type: string
         description:
           type: string
-          nullable: true
         capacity:
           type: integer
           minimum: 1
@@ -467,7 +466,7 @@ paths:
                   type: string
                 description:
                   type: string
-                  nullable: true
+                  default: ""
                 capacity:
                   type: integer
                   minimum: 1
