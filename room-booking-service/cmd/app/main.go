@@ -12,13 +12,13 @@ func main() {
 	logger, err := zap.NewProduction()
 
 	if err != nil {
-		log.Fatalf("can not initialize logger: %s", err)
+		log.Fatalf("can not initialize logger: %v", err)
 	}
 
 	cfg, err := config.New()
 
 	if err != nil {
-		log.Fatalf("can not initialize config: %s", err)
+		log.Fatalf("can not initialize config: %v", err)
 	}
 
 	app.Run(logger, cfg)
