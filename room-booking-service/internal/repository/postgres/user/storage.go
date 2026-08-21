@@ -39,10 +39,17 @@ func (repo *userRepository) getQueries(ctx context.Context) *sqlcgen.Queries {
 func (repo *userRepository) Create(
 	ctx context.Context,
 	email string,
+	role entity.UserRole,
 	passwordHash string,
 ) (entity.User, error) {
+	pgRole, roleErr := roleToPG(role)
+	if roleErr != nil {
+		return entity.User{}, fmt.Errorf("user repository - create: %w", roleErr)
+	}
+
 	user, err := repo.getQueries(ctx).CreateUser(ctx, sqlcgen.CreateUserParams{
 		Email:        email,
+		Role:         pgRole,
 		PasswordHash: passwordHash,
 	})
 	if err != nil {
@@ -86,4 +93,15 @@ func (repo *userRepository) GetByEmail(
 		},
 		PasswordHash: user.PasswordHash,
 	}, nil
+}
+
+func roleToPG(role entity.UserRole) (sqlcgen.UserRole, error) {
+	switch role {
+	case entity.UserRoleAdmin:
+		return sqlcgen.UserRoleAdmin, nil
+	case entity.UserRoleUser:
+		return sqlcgen.UserRoleUser, nil
+	default:
+		return sqlcgen.UserRoleUser, fmt.Errorf("unknown role - %s", role)
+	}
 }
