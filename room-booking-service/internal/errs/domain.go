@@ -18,6 +18,7 @@ var (
 	ErrSlotOverlap       = errors.New("slot overlaps an existing slot")
 	ErrSlotInPast        = errors.New("slot is in past")
 
-	ErrUnauthorized = errors.New("unauthorized")
-	ErrForbidden    = errors.New("forbidden")
+	ErrUnauthorized       = errors.New("unauthorized")
+	ErrForbidden          = errors.New("forbidden")
+	ErrInvalidCredentials = errors.New("invalid credentials")
 )
