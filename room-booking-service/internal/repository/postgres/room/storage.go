@@ -12,7 +12,6 @@ import (
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/entity"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/errs"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/infra/postgres/transactor"
-	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/port"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/repository/postgres/sqlcgen"
 )
 
@@ -41,12 +40,12 @@ func (repo *roomRepository) getQueries(ctx context.Context) *sqlcgen.Queries {
 
 func (repo *roomRepository) Create(
 	ctx context.Context,
-	params port.CreateRoomParams,
+	room entity.Room,
 ) (entity.Room, error) {
-	room, err := repo.getQueries(ctx).CreateRoom(ctx, sqlcgen.CreateRoomParams{
-		Name:        params.Name,
-		Description: params.Description,
-		Capacity:    int32(params.Capacity),
+	createdRoom, err := repo.getQueries(ctx).CreateRoom(ctx, sqlcgen.CreateRoomParams{
+		Name:        room.Name,
+		Description: room.Description,
+		Capacity:    int32(room.Capacity),
 	})
 	if err != nil {
 		var pgErr *pgconn.PgError
@@ -65,7 +64,7 @@ func (repo *roomRepository) Create(
 		return entity.Room{}, fmt.Errorf("room repository - create: %w", err)
 	}
 
-	return toEntityRoom(room), nil
+	return toEntityRoom(createdRoom), nil
 }
 
 func (repo *roomRepository) GetByID(
