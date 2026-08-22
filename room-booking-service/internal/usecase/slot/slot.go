@@ -159,5 +159,12 @@ func (service *slotService) generate(
 		return fmt.Errorf("slot usecase - generate: %w", err)
 	}
 
+	service.logger.Info(
+		"slots generated",
+		zap.String("room_id", roomID.String()),
+		zap.Time("date", targetDate),
+		zap.Int("slots_count", len(startAts)),
+	)
+
 	return nil
 }
