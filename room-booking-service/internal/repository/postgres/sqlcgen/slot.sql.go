@@ -77,6 +77,19 @@ func (q *Queries) GetSlotByID(ctx context.Context, slotID uuid.UUID) (Slot, erro
 	return i, err
 }
 
+const isSlotInPast = `-- name: IsSlotInPast :one
+SELECT start_at < NOW() AS is_past
+FROM slots
+WHERE id = $1
+`
+
+func (q *Queries) IsSlotInPast(ctx context.Context, slotID uuid.UUID) (bool, error) {
+	row := q.db.QueryRow(ctx, isSlotInPast, slotID)
+	var is_past bool
+	err := row.Scan(&is_past)
+	return is_past, err
+}
+
 const listFreeSlots = `-- name: ListFreeSlots :many
 WITH requested_date AS (SELECT $2::date AS value)
 SELECT s.id, s.room_id, s.start_at, s.end_at

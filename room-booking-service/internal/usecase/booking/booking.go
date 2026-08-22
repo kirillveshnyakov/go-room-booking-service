@@ -72,6 +72,7 @@ func (service *bookingService) Create(
 	if err != nil {
 		if errors.Is(err, errs.ErrSlotNotFound) ||
 			errors.Is(err, errs.ErrSlotAlreadyBooked) ||
+			errors.Is(err, errs.ErrSlotInPast) ||
 			errors.Is(err, errs.ErrUserNotFound) {
 			return entity.Booking{}, err
 		}

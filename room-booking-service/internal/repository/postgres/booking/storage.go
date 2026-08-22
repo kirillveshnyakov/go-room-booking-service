@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
@@ -54,7 +53,7 @@ func (repo *bookingRepository) Create(
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return entity.Booking{}, repo.resolveMissingBookingSlot(ctx, slotID)
+			return entity.Booking{}, repo.resolveBookingSlotState(ctx, slotID)
 		}
 
 		var pgErr *pgconn.PgError
@@ -169,19 +168,19 @@ func (repo *bookingRepository) Count(ctx context.Context) (int64, error) {
 	return count, nil
 }
 
-func (repo *bookingRepository) resolveMissingBookingSlot(
+func (repo *bookingRepository) resolveBookingSlotState(
 	ctx context.Context,
 	slotID uuid.UUID,
 ) error {
-	slot, err := repo.getQueries(ctx).GetSlotByID(ctx, slotID)
+	isPast, err := repo.getQueries(ctx).IsSlotInPast(ctx, slotID)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return errs.ErrSlotNotFound
 		}
 
-		return fmt.Errorf("booking repository - get slot for create: %w", err)
+		return fmt.Errorf("booking repository - get slot state for create: %w", err)
 	}
-	if !slot.StartAt.Time.After(time.Now()) {
+	if isPast {
 		return errs.ErrSlotInPast
 	}
 

@@ -37,3 +37,8 @@ SELECT EXISTS (SELECT 1
 SELECT id, room_id, start_at, end_at
 FROM slots
 WHERE id = sqlc.arg(slot_id);
+
+-- name: IsSlotInPast :one
+SELECT start_at < NOW() AS is_past
+FROM slots
+WHERE id = sqlc.arg(slot_id);
