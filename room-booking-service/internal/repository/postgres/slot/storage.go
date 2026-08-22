@@ -122,6 +122,22 @@ func (repo *slotRepository) ListFree(
 	return list, nil
 }
 
+func (repo *slotRepository) CheckExistsForDate(
+	ctx context.Context,
+	roomID uuid.UUID,
+	targetDate time.Time,
+) (bool, error) {
+	ok, err := repo.getQueries(ctx).CheckSlotsExistsForDate(ctx, sqlcgen.CheckSlotsExistsForDateParams{
+		RoomID:     roomID,
+		TargetDate: dateToPg(targetDate),
+	})
+	if err != nil {
+		return false, fmt.Errorf("slot repository - check exists for date: %w", err)
+	}
+
+	return ok, nil
+}
+
 func dateToPg(value time.Time) pgtype.Date {
 	date := value.UTC()
 

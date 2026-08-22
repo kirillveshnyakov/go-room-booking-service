@@ -12,6 +12,26 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const checkSlotsExistsForDate = `-- name: CheckSlotsExistsForDate :one
+SELECT EXISTS (SELECT 1
+               FROM slots AS s
+               WHERE s.room_id = $1
+                 AND s.start_at >= ($2::date::timestamp AT TIME ZONE 'UTC')
+                 AND s.start_at < (($2::date + 1)::timestamp AT TIME ZONE 'UTC'))
+`
+
+type CheckSlotsExistsForDateParams struct {
+	RoomID     uuid.UUID
+	TargetDate pgtype.Date
+}
+
+func (q *Queries) CheckSlotsExistsForDate(ctx context.Context, arg CheckSlotsExistsForDateParams) (bool, error) {
+	row := q.db.QueryRow(ctx, checkSlotsExistsForDate, arg.RoomID, arg.TargetDate)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const createSlotsForDate = `-- name: CreateSlotsForDate :execrows
 INSERT INTO slots (room_id,
                    start_at,

@@ -26,6 +26,13 @@ WHERE s.room_id = sqlc.arg(room_id)
                     AND b.status = 'active')
 ORDER BY s.start_at, s.id;
 
+-- name: CheckSlotsExistsForDate :one
+SELECT EXISTS (SELECT 1
+               FROM slots AS s
+               WHERE s.room_id = sqlc.arg(room_id)
+                 AND s.start_at >= (sqlc.arg(target_date)::date::timestamp AT TIME ZONE 'UTC')
+                 AND s.start_at < ((sqlc.arg(target_date)::date + 1)::timestamp AT TIME ZONE 'UTC'));
+
 -- name: GetSlotByID :one
 SELECT id, room_id, start_at, end_at
 FROM slots
