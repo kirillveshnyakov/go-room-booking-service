@@ -59,6 +59,16 @@ func (d DayOfWeek) IsValid() bool {
 	}
 }
 
+func GetDayOfWeek(date time.Time) DayOfWeek {
+	weekday := date.Weekday()
+
+	if weekday == time.Sunday {
+		return DayOfWeekSunday
+	}
+
+	return DayOfWeek(weekday)
+}
+
 type BookingStatus string
 
 const (
