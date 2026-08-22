@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math"
 
 	"github.com/google/uuid"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/entity"
@@ -30,6 +31,8 @@ type bookingService struct {
 	conferenceLinkGenerator conferenceLinkGenerator
 	logger                  *zap.Logger
 }
+
+const maxPageSize = 100
 
 func NewBookingService(
 	bookingRepository bookingRepository,
@@ -96,6 +99,13 @@ func (service *bookingService) List(
 	page int,
 	pageSize int,
 ) ([]entity.Booking, int64, error) {
+	if pageSize < 1 || pageSize > maxPageSize {
+		return nil, 0, fmt.Errorf("booking usecase - list: validation error: %w", errs.ErrPaginationPageSizeInvalid)
+	}
+	if page < 1 || page > math.MaxInt/pageSize+1 {
+		return nil, 0, fmt.Errorf("booking usecase - list: validation error: %w", errs.ErrPaginationPageInvalid)
+	}
+
 	pageOffset := (page - 1) * pageSize
 
 	list, err := service.bookingRepository.List(ctx, pageSize, pageOffset)

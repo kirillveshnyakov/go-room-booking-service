@@ -9,19 +9,17 @@ var (
 	ErrSlotRoomIDRequired   = errors.New("slot room id is required")
 	ErrSlotStartAtRequired  = errors.New("slot start time is required")
 	ErrSlotEndAtRequired    = errors.New("slot end time is required")
-	ErrSlotTimeRangeInvalid = errors.New(
-		"slot end time must be after start time",
-	)
-	ErrSlotDurationInvalid = errors.New(
-		"slot duration must be 30 minutes",
-	)
+	ErrSlotTimeRangeInvalid = errors.New("slot end time must be after start time")
+	ErrSlotDurationInvalid  = errors.New("slot duration must be 30 minutes")
 
 	ErrRoomNameRequired    = errors.New("room name is required")
 	ErrRoomCapacityInvalid = errors.New("room capacity must be positive")
 
-	ErrBookingSlotIDRequired = errors.New("booking slot id is required")
-	ErrBookingUserIDRequired = errors.New("booking user id is required")
-	ErrBookingStatusInvalid  = errors.New("booking status is invalid")
+	ErrBookingSlotIDRequired     = errors.New("booking slot id is required")
+	ErrBookingUserIDRequired     = errors.New("booking user id is required")
+	ErrBookingStatusInvalid      = errors.New("booking status is invalid")
+	ErrPaginationPageInvalid     = errors.New("page must be greater than zero")
+	ErrPaginationPageSizeInvalid = errors.New("page size must be between 1 and 100")
 
 	ErrScheduleRuleDayInvalid       = errors.New("schedule rule day is invalid")
 	ErrScheduleRuleStartTimeInvalid = errors.New("schedule rule start time is invalid")
