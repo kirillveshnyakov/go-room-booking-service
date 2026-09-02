@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/entity"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/errs"
+	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/port"
 	"go.uber.org/zap"
 )
 
@@ -48,13 +49,11 @@ func NewBookingService(
 
 func (service *bookingService) Create(
 	ctx context.Context,
-	userID uuid.UUID,
-	slotID uuid.UUID,
-	createConferenceLink bool,
+	params port.CreateBookingParams,
 ) (entity.Booking, error) {
 	var conferenceLink string
 
-	if createConferenceLink {
+	if params.CreateConferenceLink {
 		link, err := service.conferenceLinkGenerator.Generate(ctx)
 		if err != nil {
 			service.logger.Error(
@@ -68,7 +67,7 @@ func (service *bookingService) Create(
 		conferenceLink = link
 	}
 
-	booking, err := service.bookingRepository.Create(ctx, slotID, userID, conferenceLink)
+	booking, err := service.bookingRepository.Create(ctx, params.SlotID, params.UserID, conferenceLink)
 	if err != nil {
 		if errors.Is(err, errs.ErrSlotNotFound) ||
 			errors.Is(err, errs.ErrSlotAlreadyBooked) ||
