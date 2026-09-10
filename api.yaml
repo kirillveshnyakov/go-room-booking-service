@@ -60,6 +60,8 @@ components:
                 - BOOKING_NOT_FOUND
                 - FORBIDDEN
                 - SCHEDULE_EXISTS
+                - TOO_MANY_REQUESTS
+                - SERVICE_UNAVAILABLE
                 - INTERNAL_ERROR
             message:
               type: string
@@ -628,6 +630,24 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '429':
+          description: Превышен лимит запросов на получение слотов
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                error:
+                  code: TOO_MANY_REQUESTS
+                  message: too many requests
+        '503':
+          description: Превышен лимит одновременных запросов на получение слотов
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+              example:
+                error:
+                  code: SERVICE_UNAVAILABLE
+                  message: service temporarily unavailable
         '500':
           description: Внутренняя ошибка сервера
           content:

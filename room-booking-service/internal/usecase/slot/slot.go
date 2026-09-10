@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/entity"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/errs"
+	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/requestctx"
 	"go.uber.org/zap"
 )
 
@@ -45,7 +46,7 @@ func NewSlotService(
 		slotRepository:     slotRepository,
 		scheduleRepository: scheduleRepository,
 		roomRepository:     roomRepository,
-		logger:             logger.Named("slot_usecase"),
+		logger:             logger,
 	}
 }
 
@@ -54,6 +55,8 @@ func (service *slotService) ListFree(
 	roomID uuid.UUID,
 	targetDate time.Time,
 ) ([]entity.Slot, error) {
+	log := requestctx.LoggerOrDefault(ctx, service.logger).Named("slot_usecase")
+
 	targetDate = targetDate.UTC()
 
 	_, err := service.roomRepository.GetByID(ctx, roomID)
@@ -62,7 +65,7 @@ func (service *slotService) ListFree(
 			return nil, err
 		}
 
-		service.logger.Error(
+		log.Error(
 			"room lookup failed",
 			zap.Error(err),
 		)
@@ -72,7 +75,7 @@ func (service *slotService) ListFree(
 
 	ok, checkErr := service.slotRepository.CheckExistsForDate(ctx, roomID, targetDate)
 	if checkErr != nil {
-		service.logger.Error(
+		log.Error(
 			"slot existence check failed",
 			zap.Error(checkErr),
 		)
@@ -88,7 +91,7 @@ func (service *slotService) ListFree(
 				return []entity.Slot{}, nil
 			}
 
-			service.logger.Error(
+			log.Error(
 				"schedule rule lookup failed",
 				zap.Error(ruleErr),
 			)
@@ -96,14 +99,14 @@ func (service *slotService) ListFree(
 			return nil, fmt.Errorf("slot usecase - list free: %w", ruleErr)
 		}
 
-		if err = service.generate(ctx, roomID, targetDate, rule); err != nil {
+		if err = service.generate(ctx, log, roomID, targetDate, rule); err != nil {
 			return nil, fmt.Errorf("slot usecase - list free: %w", err)
 		}
 	}
 
 	slots, listErr := service.slotRepository.ListFree(ctx, roomID, targetDate)
 	if listErr != nil {
-		service.logger.Error(
+		log.Error(
 			"slot list failed",
 			zap.Error(listErr),
 		)
@@ -118,6 +121,7 @@ const slotDuration = 30 * time.Minute
 
 func (service *slotService) generate(
 	ctx context.Context,
+	log *zap.Logger,
 	roomID uuid.UUID,
 	targetDate time.Time,
 	rule entity.ScheduleRule,
@@ -151,7 +155,7 @@ func (service *slotService) generate(
 	}
 
 	if err := service.slotRepository.Create(ctx, roomID, startAts); err != nil {
-		service.logger.Error(
+		log.Error(
 			"slot generation failed",
 			zap.Error(err),
 		)
@@ -159,7 +163,7 @@ func (service *slotService) generate(
 		return fmt.Errorf("slot usecase - generate: %w", err)
 	}
 
-	service.logger.Info(
+	log.Info(
 		"slots generated",
 		zap.String("room_id", roomID.String()),
 		zap.Time("date", targetDate),

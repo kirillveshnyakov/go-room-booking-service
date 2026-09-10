@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/entity"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/errs"
+	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/requestctx"
 	"go.uber.org/zap"
 )
 
@@ -28,7 +29,7 @@ func NewScheduleService(
 ) *scheduleService {
 	return &scheduleService{
 		scheduleRepository: scheduleRepository,
-		logger:             logger.Named("schedule_usecase"),
+		logger:             logger,
 	}
 }
 
@@ -37,6 +38,8 @@ func (service *scheduleService) Create(
 	roomID uuid.UUID,
 	rules []entity.ScheduleRule,
 ) (entity.Schedule, error) {
+	log := requestctx.LoggerOrDefault(ctx, service.logger).Named("schedule_usecase")
+
 	schedule := entity.Schedule{
 		RoomID: roomID,
 		Rules:  rules,
@@ -52,7 +55,7 @@ func (service *scheduleService) Create(
 			return entity.Schedule{}, err
 		}
 
-		service.logger.Error(
+		log.Error(
 			"schedule creation failed",
 			zap.Error(err),
 		)
@@ -60,7 +63,7 @@ func (service *scheduleService) Create(
 		return entity.Schedule{}, fmt.Errorf("schedule usecase - create: %w", err)
 	}
 
-	service.logger.Info(
+	log.Info(
 		"schedule created",
 		zap.String("schedule_id", createdSchedule.ID.String()),
 		zap.String("room_id", createdSchedule.RoomID.String()),

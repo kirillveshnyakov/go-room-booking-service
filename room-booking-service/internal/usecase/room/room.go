@@ -8,6 +8,7 @@ import (
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/entity"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/errs"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/port"
+	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/requestctx"
 	"go.uber.org/zap"
 )
 
@@ -29,7 +30,7 @@ func NewRoomService(
 ) *roomService {
 	return &roomService{
 		roomRepository: roomRepository,
-		logger:         logger.Named("room_usecase"),
+		logger:         logger,
 	}
 }
 
@@ -37,6 +38,8 @@ func (service *roomService) Create(
 	ctx context.Context,
 	params port.CreateRoomParams,
 ) (entity.Room, error) {
+	log := requestctx.LoggerOrDefault(ctx, service.logger).Named("room_usecase")
+
 	room := entity.Room{
 		Name:        params.Name,
 		Description: params.Description,
@@ -52,7 +55,7 @@ func (service *roomService) Create(
 			return entity.Room{}, err
 		}
 
-		service.logger.Error(
+		log.Error(
 			"room creation failed",
 			zap.Error(err),
 		)
@@ -60,7 +63,7 @@ func (service *roomService) Create(
 		return entity.Room{}, fmt.Errorf("room usecase - create: %w", err)
 	}
 
-	service.logger.Info(
+	log.Info(
 		"room created",
 		zap.String("room_id", createdRoom.ID.String()),
 	)
@@ -69,9 +72,11 @@ func (service *roomService) Create(
 }
 
 func (service *roomService) List(ctx context.Context) ([]entity.Room, error) {
+	log := requestctx.LoggerOrDefault(ctx, service.logger).Named("room_usecase")
+
 	list, err := service.roomRepository.List(ctx)
 	if err != nil {
-		service.logger.Error(
+		log.Error(
 			"room list failed",
 			zap.Error(err),
 		)

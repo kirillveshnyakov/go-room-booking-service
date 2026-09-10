@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/entity"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/errs"
+	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/requestctx"
 	"go.uber.org/zap"
 )
 
@@ -45,7 +46,7 @@ func NewAuthService(
 		userRepository: userRepository,
 		passwordHasher: passwordHasher,
 		tokenIssuer:    tokenIssuer,
-		logger:         logger.Named("auth_usecase"),
+		logger:         logger,
 	}
 }
 
@@ -55,6 +56,8 @@ func (service *authService) Register(
 	password string,
 	role entity.UserRole,
 ) (entity.User, error) {
+	log := requestctx.LoggerOrDefault(ctx, service.logger).Named("auth_usecase")
+
 	user := entity.User{
 		Email: email,
 		Role:  role,
@@ -62,10 +65,13 @@ func (service *authService) Register(
 	if err := user.Validate(); err != nil {
 		return entity.User{}, fmt.Errorf("auth usecase - register: validation error: %w", err)
 	}
+	if err := validatePassword(password); err != nil {
+		return entity.User{}, fmt.Errorf("auth usecase - register: validation error: %w", err)
+	}
 
 	passwordHash, err := service.passwordHasher.Hash(password)
 	if err != nil {
-		service.logger.Error(
+		log.Error(
 			"user registration failed",
 			zap.Error(err),
 		)
@@ -79,7 +85,7 @@ func (service *authService) Register(
 			return entity.User{}, createErr
 		}
 
-		service.logger.Error(
+		log.Error(
 			"user registration failed",
 			zap.Error(createErr),
 		)
@@ -87,7 +93,7 @@ func (service *authService) Register(
 		return entity.User{}, fmt.Errorf("auth usecase - register: %w", createErr)
 	}
 
-	service.logger.Info(
+	log.Info(
 		"user registered",
 		zap.String("user_id", createdUser.ID.String()),
 		zap.String("role", string(createdUser.Role)),
@@ -96,11 +102,26 @@ func (service *authService) Register(
 	return createdUser, nil
 }
 
+const maxPasswordBytes = 72
+
+func validatePassword(password string) error {
+	if password == "" {
+		return errs.ErrPasswordRequired
+	}
+	if len(password) > maxPasswordBytes {
+		return errs.ErrPasswordTooLong
+	}
+
+	return nil
+}
+
 func (service *authService) Login(
 	ctx context.Context,
 	email string,
 	password string,
 ) (string, error) {
+	log := requestctx.LoggerOrDefault(ctx, service.logger).Named("auth_usecase")
+
 	email = strings.TrimSpace(strings.ToLower(email))
 
 	authUser, err := service.userRepository.GetByEmail(ctx, email)
@@ -109,7 +130,7 @@ func (service *authService) Login(
 			return "", errs.ErrInvalidCredentials
 		}
 
-		service.logger.Error(
+		log.Error(
 			"login failed",
 			zap.Error(err),
 		)
@@ -122,7 +143,7 @@ func (service *authService) Login(
 			return "", errs.ErrInvalidCredentials
 		}
 
-		service.logger.Error(
+		log.Error(
 			"login failed",
 			zap.Error(err),
 		)
@@ -132,7 +153,7 @@ func (service *authService) Login(
 
 	token, generateErr := service.tokenIssuer.Generate(authUser.User.ID, authUser.User.Role)
 	if generateErr != nil {
-		service.logger.Error(
+		log.Error(
 			"login failed",
 			zap.Error(generateErr),
 		)
@@ -152,6 +173,8 @@ func (service *authService) DummyLogin(
 	ctx context.Context,
 	role entity.UserRole,
 ) (string, error) {
+	log := requestctx.LoggerOrDefault(ctx, service.logger).Named("auth_usecase")
+
 	if !role.IsValid() {
 		return "", fmt.Errorf("auth usecase - dummyLogin: validation error: %w", errs.ErrUserRoleInvalid)
 	}
@@ -167,7 +190,7 @@ func (service *authService) DummyLogin(
 
 	token, generateErr := service.tokenIssuer.Generate(id, role)
 	if generateErr != nil {
-		service.logger.Error(
+		log.Error(
 			"dummy login failed",
 			zap.Error(generateErr),
 		)

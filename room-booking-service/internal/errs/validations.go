@@ -5,6 +5,8 @@ import "errors"
 var (
 	ErrUserEmailRequired = errors.New("user email is required")
 	ErrUserRoleInvalid   = errors.New("user role is invalid")
+	ErrPasswordRequired  = errors.New("password is required")
+	ErrPasswordTooLong   = errors.New("password must not exceed 72 bytes")
 
 	ErrSlotRoomIDRequired   = errors.New("slot room id is required")
 	ErrSlotStartAtRequired  = errors.New("slot start time is required")

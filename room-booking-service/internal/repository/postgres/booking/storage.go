@@ -23,12 +23,17 @@ const (
 )
 
 type bookingRepository struct {
-	queries *sqlcgen.Queries
+	queries    *sqlcgen.Queries
+	transactor transactor.Transactor
 }
 
-func NewBookingRepository(db sqlcgen.DBTX) *bookingRepository {
+func NewBookingRepository(
+	db sqlcgen.DBTX,
+	transactor transactor.Transactor,
+) *bookingRepository {
 	return &bookingRepository{
-		queries: sqlcgen.New(db),
+		queries:    sqlcgen.New(db),
+		transactor: transactor,
 	}
 }
 
@@ -125,21 +130,38 @@ func (repo *bookingRepository) List(
 	ctx context.Context,
 	pageLimit int,
 	pageOffset int,
-) ([]entity.Booking, error) {
-	bookings, err := repo.getQueries(ctx).ListBookings(ctx, sqlcgen.ListBookingsParams{
-		PageLimit:  int32(pageLimit),
-		PageOffset: int32(pageOffset),
+) ([]entity.Booking, int64, error) {
+	var (
+		result []entity.Booking
+		total  int64
+	)
+
+	err := repo.transactor.WithTx(ctx, func(ctx context.Context) error {
+		bookings, err := repo.getQueries(ctx).ListBookings(ctx, sqlcgen.ListBookingsParams{
+			PageLimit:  int32(pageLimit),
+			PageOffset: int32(pageOffset),
+		})
+		if err != nil {
+			return fmt.Errorf("booking repository - list: %w", err)
+		}
+
+		result = make([]entity.Booking, 0, len(bookings))
+		for _, booking := range bookings {
+			result = append(result, bookingToEntity(booking))
+		}
+
+		total, err = repo.getQueries(ctx).CountBookings(ctx)
+		if err != nil {
+			return fmt.Errorf("booking repository - count: %w", err)
+		}
+
+		return nil
 	})
 	if err != nil {
-		return nil, fmt.Errorf("booking repository - list: %w", err)
+		return nil, 0, err
 	}
 
-	result := make([]entity.Booking, 0, len(bookings))
-	for _, booking := range bookings {
-		result = append(result, bookingToEntity(booking))
-	}
-
-	return result, nil
+	return result, total, nil
 }
 
 func (repo *bookingRepository) ListUserFuture(
@@ -157,15 +179,6 @@ func (repo *bookingRepository) ListUserFuture(
 	}
 
 	return result, nil
-}
-
-func (repo *bookingRepository) Count(ctx context.Context) (int64, error) {
-	count, err := repo.getQueries(ctx).CountBookings(ctx)
-	if err != nil {
-		return 0, fmt.Errorf("booking repository - count: %w", err)
-	}
-
-	return count, nil
 }
 
 func (repo *bookingRepository) resolveBookingSlotState(

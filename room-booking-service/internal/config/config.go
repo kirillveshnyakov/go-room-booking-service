@@ -1,8 +1,8 @@
 package config
 
 import (
-	"fmt"
 	"net"
+	"net/url"
 	"time"
 
 	"github.com/caarlos0/env/v10"
@@ -12,7 +12,9 @@ type (
 	HTTPConfig struct {
 		Host              string        `env:"HTTP_HOST" envDefault:"localhost"`
 		Port              string        `env:"HTTP_PORT" envDefault:"8080"`
-		AllowedOrigins    []string      `env:"HTTP_ALLOWED_ORIGINS" envSeparator:"," envDefault:""`
+		RateLimit         float64       `env:"HTTP_RATE_LIMIT" envDefault:"100"`
+		RateLimitBurst    int           `env:"HTTP_RATE_LIMIT_BURST" envDefault:"100"`
+		ConcurrencyLimit  int           `env:"HTTP_CONCURRENCY_LIMIT" envDefault:"10"`
 		ReadHeaderTimeout time.Duration `env:"HTTP_READ_HEADER_TIMEOUT" envDefault:"5s"`
 		ReadTimeout       time.Duration `env:"HTTP_READ_TIMEOUT" envDefault:"15s"`
 		WriteTimeout      time.Duration `env:"HTTP_WRITE_TIMEOUT" envDefault:"30s"`
@@ -33,10 +35,22 @@ type (
 		Service     string `env:"LOGGER_SERVICE" envDefault:"room_booking_service"`
 	}
 
+	AuthConfig struct {
+		PasswordHashCost int           `env:"PASSWORD_HASH_COST" envDefault:"12"`
+		JWTSecret        string        `env:"JWT_SECRET,required"`
+		JWTTTL           time.Duration `env:"JWT_TTL" envDefault:"24h"`
+	}
+
+	ConferenceConfig struct {
+		BaseURL string `env:"CONFERENCE_BASE_URL" envDefault:"https://meet.example.com"`
+	}
+
 	Config struct {
-		HTTP   HTTPConfig
-		PG     PGConfig
-		Logger LoggerConfig
+		HTTP       HTTPConfig
+		PG         PGConfig
+		Logger     LoggerConfig
+		Auth       AuthConfig
+		Conference ConferenceConfig
 	}
 )
 
@@ -45,12 +59,17 @@ func (c *HTTPConfig) HTTPAddress() string {
 }
 
 func (c *Config) ConstructPostgresURL() string {
-	return fmt.Sprintf("postgres://%s:%s@%s/%s?sslmode=disable",
-		c.PG.User,
-		c.PG.Password,
-		net.JoinHostPort(c.PG.Host, c.PG.Port),
-		c.PG.DB,
-	)
+	postgresURL := &url.URL{
+		Scheme: "postgres",
+		User:   url.UserPassword(c.PG.User, c.PG.Password),
+		Host:   net.JoinHostPort(c.PG.Host, c.PG.Port),
+		Path:   c.PG.DB,
+	}
+	query := postgresURL.Query()
+	query.Set("sslmode", "disable")
+	postgresURL.RawQuery = query.Encode()
+
+	return postgresURL.String()
 }
 func New() (*Config, error) {
 	var cfg Config
