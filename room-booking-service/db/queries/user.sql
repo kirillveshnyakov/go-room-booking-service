@@ -1,6 +1,5 @@
 -- name: CreateUser :one
 INSERT INTO users (email, role, password_hash)
-
 VALUES (sqlc.arg(email),
         sqlc.arg(role),
         sqlc.arg(password_hash))

@@ -306,16 +306,13 @@ paths:
           application/json:
             schema:
               type: object
-              required: [email, password, role]
+              required: [email, password]
               properties:
                 email:
                   type: string
                   format: email
                 password:
                   type: string
-                role:
-                  type: string
-                  enum: [admin, user]
       responses:
         '201':
           description: Пользователь создан

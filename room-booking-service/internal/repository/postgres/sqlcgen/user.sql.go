@@ -14,7 +14,6 @@ import (
 
 const createUser = `-- name: CreateUser :one
 INSERT INTO users (email, role, password_hash)
-
 VALUES ($1,
         $2,
         $3)

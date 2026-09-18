@@ -13,7 +13,7 @@ import (
 
 type (
 	authUsecase interface {
-		Register(ctx context.Context, email string, password string, role entity.UserRole) (entity.User, error)
+		Register(ctx context.Context, email string, password string) (entity.User, error)
 		Login(ctx context.Context, email string, password string) (string, error)
 		DummyLogin(ctx context.Context, role entity.UserRole) (string, error)
 	}
@@ -40,7 +40,6 @@ func (h *AuthHandler) Register(c *gin.Context) {
 		c.Request.Context(),
 		request.Email,
 		request.Password,
-		entity.UserRole(request.Role),
 	)
 	if err != nil {
 		httperror.HandleError(c, err)

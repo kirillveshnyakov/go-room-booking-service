@@ -54,13 +54,12 @@ func (service *authService) Register(
 	ctx context.Context,
 	email string,
 	password string,
-	role entity.UserRole,
 ) (entity.User, error) {
 	log := requestctx.LoggerOrDefault(ctx, service.logger).Named("auth_usecase")
 
 	user := entity.User{
 		Email: email,
-		Role:  role,
+		Role:  entity.UserRoleUser,
 	}
 	if err := user.Validate(); err != nil {
 		return entity.User{}, fmt.Errorf("auth usecase - register: validation error: %w", err)
