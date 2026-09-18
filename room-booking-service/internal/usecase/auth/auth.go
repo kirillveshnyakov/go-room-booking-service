@@ -25,7 +25,7 @@ type (
 	}
 
 	tokenIssuer interface {
-		Generate(userID uuid.UUID, role entity.UserRole) (string, error)
+		GenerateToken(identity entity.Identity) (string, error)
 	}
 )
 
@@ -150,7 +150,11 @@ func (service *authService) Login(
 		return "", fmt.Errorf("auth usecase - login: %w", err)
 	}
 
-	token, generateErr := service.tokenIssuer.Generate(authUser.User.ID, authUser.User.Role)
+	token, generateErr := service.tokenIssuer.GenerateToken(entity.Identity{
+		UserID:    authUser.User.ID,
+		SessionID: uuid.New(),
+		Role:      authUser.User.Role,
+	})
 	if generateErr != nil {
 		log.Error(
 			"login failed",
@@ -187,7 +191,11 @@ func (service *authService) DummyLogin(
 		id = dummyUserID
 	}
 
-	token, generateErr := service.tokenIssuer.Generate(id, role)
+	token, generateErr := service.tokenIssuer.GenerateToken(entity.Identity{
+		UserID:    id,
+		SessionID: uuid.New(),
+		Role:      role,
+	})
 	if generateErr != nil {
 		log.Error(
 			"dummy login failed",

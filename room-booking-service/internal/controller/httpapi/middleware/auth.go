@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/gin"
-	"github.com/google/uuid"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/controller/httpapi/ctxvalues"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/controller/httpapi/httperror"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/entity"
@@ -14,7 +13,7 @@ import (
 )
 
 type tokenVerifier interface {
-	Verify(string) (uuid.UUID, entity.UserRole, error)
+	VerifyToken(string) (entity.Identity, error)
 }
 
 func bearerToken(header string) (string, bool) {
@@ -36,20 +35,22 @@ func Authentication(verifier tokenVerifier, fallbackLogger *zap.Logger) gin.Hand
 			return
 		}
 
-		userID, role, err := verifier.Verify(token)
+		identity, err := verifier.VerifyToken(token)
 		if err != nil {
 			unauthorized(c)
 			return
 		}
 
-		ctxvalues.SetUserID(c, userID)
-		ctxvalues.SetRole(c, role)
+		ctxvalues.SetUserID(c, identity.UserID)
+		ctxvalues.SetRole(c, identity.Role)
 
 		ctx := c.Request.Context()
 		logger := requestctx.LoggerOrDefault(ctx, fallbackLogger).With(
-			zap.String("user_id", userID.String()),
-			zap.String("role", string(role)),
+			zap.String("user_id", identity.UserID.String()),
+			zap.String("session_id", identity.SessionID.String()),
+			zap.String("role", string(identity.Role)),
 		)
+		ctx = requestctx.WithIdentity(ctx, identity)
 		ctx = requestctx.WithLogger(ctx, logger)
 		c.Request = c.Request.WithContext(ctx)
 

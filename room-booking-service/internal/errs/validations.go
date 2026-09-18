@@ -3,10 +3,12 @@ package errs
 import "errors"
 
 var (
-	ErrUserEmailRequired = errors.New("user email is required")
-	ErrUserRoleInvalid   = errors.New("user role is invalid")
-	ErrPasswordRequired  = errors.New("password is required")
-	ErrPasswordTooLong   = errors.New("password must not exceed 72 bytes")
+	ErrUserEmailRequired         = errors.New("user email is required")
+	ErrUserRoleInvalid           = errors.New("user role is invalid")
+	ErrPasswordRequired          = errors.New("password is required")
+	ErrPasswordTooLong           = errors.New("password must not exceed 72 bytes")
+	ErrIdentityUserIDRequired    = errors.New("identity user id is required")
+	ErrIdentitySessionIDRequired = errors.New("identity session id is required")
 
 	ErrSlotRoomIDRequired   = errors.New("slot room id is required")
 	ErrSlotStartAtRequired  = errors.New("slot start time is required")

@@ -17,17 +17,9 @@ func SetUserID(c *gin.Context, userID uuid.UUID) {
 }
 
 func GetUserID(c *gin.Context) (uuid.UUID, bool) {
-	value, exists := c.Get(userIDKey)
-	if !exists {
-		return uuid.Nil, false
-	}
-
+	value, _ := c.Get(userIDKey)
 	userID, ok := value.(uuid.UUID)
-	if !ok || userID == uuid.Nil {
-		return uuid.Nil, false
-	}
-
-	return userID, ok
+	return userID, ok && userID != uuid.Nil
 }
 
 func SetRole(c *gin.Context, role entity.UserRole) {
@@ -35,16 +27,8 @@ func SetRole(c *gin.Context, role entity.UserRole) {
 }
 
 func GetRole(c *gin.Context) (entity.UserRole, bool) {
-	value, exists := c.Get(roleKey)
-	if !exists {
-		return "", false
-	}
-
+	value, _ := c.Get(roleKey)
 	role, ok := value.(entity.UserRole)
-	if !ok {
-		return "", false
-	}
-
 	return role, ok
 }
 
@@ -53,15 +37,7 @@ func SetRequestID(c *gin.Context, requestID string) {
 }
 
 func GetRequestID(c *gin.Context) (string, bool) {
-	value, exists := c.Get(requestIDKey)
-	if !exists {
-		return "", false
-	}
-
+	value, _ := c.Get(requestIDKey)
 	requestID, ok := value.(string)
-	if !ok || requestID == "" {
-		return "", false
-	}
-
-	return requestID, ok
+	return requestID, ok && requestID != ""
 }

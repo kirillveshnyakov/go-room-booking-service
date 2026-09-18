@@ -45,3 +45,29 @@ func (u *AuthUser) Normalize() {
 func (u *AuthUser) Validate() error {
 	return u.User.Validate()
 }
+
+type Identity struct {
+	UserID    uuid.UUID
+	SessionID uuid.UUID
+	Role      UserRole
+}
+
+func (i *Identity) Normalize() {
+	i.Role = i.Role.Normalize()
+}
+
+func (i *Identity) Validate() error {
+	i.Normalize()
+
+	if i.UserID == uuid.Nil {
+		return errs.ErrIdentityUserIDRequired
+	}
+	if i.SessionID == uuid.Nil {
+		return errs.ErrIdentitySessionIDRequired
+	}
+	if !i.Role.IsValid() {
+		return errs.ErrUserRoleInvalid
+	}
+
+	return nil
+}

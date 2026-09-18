@@ -36,9 +36,11 @@ type (
 	}
 
 	AuthConfig struct {
-		PasswordHashCost int           `env:"PASSWORD_HASH_COST" envDefault:"12"`
-		JWTSecret        string        `env:"JWT_SECRET,required"`
-		JWTTTL           time.Duration `env:"JWT_TTL" envDefault:"24h"`
+		PasswordHashCost    int           `env:"PASSWORD_HASH_COST" envDefault:"12"`
+		JWTSecret           string        `env:"JWT_SECRET,required"`
+		AccessTokenIssuer   string        `env:"ACCESS_TOKEN_ISSUER" envDefault:"room-booking-service"`
+		AccessTokenAudience string        `env:"ACCESS_TOKEN_AUDIENCE" envDefault:"room-booking-api"`
+		AccessTokenTTL      time.Duration `env:"ACCESS_TOKEN_TTL" envDefault:"15m"`
 	}
 
 	ConferenceConfig struct {

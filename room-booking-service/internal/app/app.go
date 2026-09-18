@@ -71,19 +71,19 @@ func Run(cfg *config.Config) error {
 		return fmt.Errorf("initialize password hasher: %w", err)
 	}
 
-	tokenIssuer, err := jwt.NewIssuer(cfg.Auth.JWTSecret, cfg.Auth.JWTTTL)
+	tokenManager, err := jwt.NewTokenManager(
+		cfg.Auth.JWTSecret,
+		cfg.Auth.AccessTokenIssuer,
+		cfg.Auth.AccessTokenAudience,
+		cfg.Auth.AccessTokenTTL,
+	)
 	if err != nil {
-		return fmt.Errorf("initialize token issuer: %w", err)
+		return fmt.Errorf("initialize token manager: %w", err)
 	}
 
 	linkGenerator, err := conference.NewLinkGenerator(cfg.Conference.BaseURL)
 	if err != nil {
 		return fmt.Errorf("initialize link generator: %w", err)
-	}
-
-	tokenVerifier, err := jwt.NewVerifier(cfg.Auth.JWTSecret)
-	if err != nil {
-		return fmt.Errorf("initialize token verifier: %w", err)
 	}
 
 	userRepository := userDB.NewUserRepository(pool)
@@ -95,7 +95,7 @@ func Run(cfg *config.Config) error {
 	authService := auth.NewAuthService(
 		userRepository,
 		passwordHasher,
-		tokenIssuer,
+		tokenManager,
 		logger,
 	)
 	roomService := room.NewRoomService(
@@ -137,7 +137,7 @@ func Run(cfg *config.Config) error {
 		scheduleHandler,
 		slotHandler,
 		bookingHandler,
-		middleware.Authentication(tokenVerifier, logger),
+		middleware.Authentication(tokenManager, logger),
 		middleware.RequestID(logger),
 		middleware.Logging(logger),
 		middleware.Recovery(logger),
