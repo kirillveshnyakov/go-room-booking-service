@@ -13,10 +13,11 @@ import (
 )
 
 const createSession = `-- name: CreateSession :one
-INSERT INTO sessions (user_id, refresh_token_hash, expires_at)
+INSERT INTO sessions (id, user_id, refresh_token_hash, expires_at)
 VALUES ($1,
         $2,
-        $3)
+        $3,
+        $4)
 RETURNING
     id,
     user_id,
@@ -28,13 +29,19 @@ RETURNING
 `
 
 type CreateSessionParams struct {
+	ID               uuid.UUID
 	UserID           uuid.UUID
 	RefreshTokenHash []byte
 	ExpiresAt        pgtype.Timestamptz
 }
 
 func (q *Queries) CreateSession(ctx context.Context, arg CreateSessionParams) (Session, error) {
-	row := q.db.QueryRow(ctx, createSession, arg.UserID, arg.RefreshTokenHash, arg.ExpiresAt)
+	row := q.db.QueryRow(ctx, createSession,
+		arg.ID,
+		arg.UserID,
+		arg.RefreshTokenHash,
+		arg.ExpiresAt,
+	)
 	var i Session
 	err := row.Scan(
 		&i.ID,

@@ -21,7 +21,7 @@ func NewTokenManager() *tokenManager {
 
 func (manager *tokenManager) CreateRefreshToken(sessionID uuid.UUID) (string, []byte, error) {
 	if sessionID == uuid.Nil {
-		return "", nil, errs.ErrIdentitySessionIDRequired
+		return "", nil, errs.ErrSessionIDRequired
 	}
 
 	secret := make([]byte, refreshTokenSecretSize)

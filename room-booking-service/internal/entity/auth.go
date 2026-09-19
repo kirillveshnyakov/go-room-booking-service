@@ -98,6 +98,9 @@ func (s *Session) Normalize() {
 func (s *Session) Validate() error {
 	s.Normalize()
 
+	if s.ID == uuid.Nil {
+		return errs.ErrSessionIDRequired
+	}
 	if s.UserID == uuid.Nil {
 		return errs.ErrSessionUserIDRequired
 	}

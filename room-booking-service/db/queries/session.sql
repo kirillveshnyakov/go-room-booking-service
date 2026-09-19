@@ -1,6 +1,7 @@
 -- name: CreateSession :one
-INSERT INTO sessions (user_id, refresh_token_hash, expires_at)
-VALUES (sqlc.arg(user_id),
+INSERT INTO sessions (id, user_id, refresh_token_hash, expires_at)
+VALUES (sqlc.arg(id),
+        sqlc.arg(user_id),
         sqlc.arg(refresh_token_hash),
         sqlc.arg(expires_at))
 RETURNING

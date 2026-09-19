@@ -21,6 +21,14 @@ components:
       scheme: bearer
       bearerFormat: JWT
 
+    RefreshTokenCookie:
+      type: apiKey
+      in: cookie
+      name: refresh_token
+      description: >
+        Refresh token, установленный сервером в HttpOnly cookie.
+        Cookie используется только для обновления пары токенов.
+
   parameters:
     RoomIdPath:
       name: roomId
@@ -95,6 +103,15 @@ components:
         token:
           type: string
           description: JWT для заголовка Authorization Bearer
+
+    AccessTokenResponse:
+      type: object
+      additionalProperties: false
+      required: [access_token]
+      properties:
+        access_token:
+          type: string
+          description: Access JWT для заголовка Authorization Bearer
 
     User:
       type: object
@@ -339,7 +356,9 @@ paths:
       tags: [Auth]
       summary: "Авторизация по email и паролю (ДОПОЛНИТЕЛЬНОЕ ЗАДАНИЕ — необязательно)"
       description: >
-        Авторизует пользователя по email и паролю, возвращает JWT.
+        Авторизует пользователя по email и паролю.
+        Access token возвращается в JSON-ответе, refresh token устанавливается
+        сервером в HttpOnly cookie `refresh_token`.
         Реализация этого эндпоинта является **дополнительным заданием**.
         Для авторизации в рамках обязательной части используйте `/dummyLogin`.
         Доступен без авторизации.
@@ -359,12 +378,111 @@ paths:
       responses:
         '200':
           description: Успешная авторизация
+          headers:
+            Set-Cookie:
+              description: >
+                Устанавливает новый refresh token в HttpOnly cookie `refresh_token`.
+                В production cookie должна передаваться с флагом Secure.
+              schema:
+                type: string
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Token'
+                $ref: '#/components/schemas/AccessTokenResponse'
         '401':
           description: Неверные учётные данные
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InternalErrorResponse' }
+
+  /refresh:
+    post:
+      tags: [Auth]
+      summary: Обновить access token
+      description: >
+        Использует refresh token из HttpOnly cookie `refresh_token`.
+        При успешном обновлении старый refresh token становится недействительным:
+        сервер выполняет rotation, возвращает новый access token и заменяет
+        refresh token в cookie. Access token для вызова этого эндпоинта не требуется.
+      security:
+        - RefreshTokenCookie: []
+      responses:
+        '200':
+          description: Токены успешно обновлены
+          headers:
+            Set-Cookie:
+              description: >
+                Заменяет refresh token новым значением в HttpOnly cookie `refresh_token`.
+                В production cookie должна передаваться с флагом Secure.
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessTokenResponse'
+        '401':
+          description: Refresh token отсутствует, недействителен, истёк или сессия отозвана
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InternalErrorResponse' }
+
+  /logout:
+    post:
+      tags: [Auth]
+      summary: Завершить текущую сессию
+      description: >
+        Отзывает текущую серверную сессию, идентификатор которой содержится
+        в claim `sid` access JWT. Refresh cookie удаляется.
+        Операция идемпотентна.
+      security: [{ BearerAuth: [] }]
+      responses:
+        '204':
+          description: Текущая сессия завершена
+          headers:
+            Set-Cookie:
+              description: Удаляет HttpOnly cookie `refresh_token`.
+              schema:
+                type: string
+        '401':
+          description: Не авторизован
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
+        '500':
+          description: Внутренняя ошибка сервера
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/InternalErrorResponse' }
+
+  /logout-all:
+    post:
+      tags: [Auth]
+      summary: Завершить все сессии текущего пользователя
+      description: >
+        Отзывает все серверные сессии пользователя, чей UUID содержится
+        в claim `sub` access JWT. Refresh cookie текущей сессии удаляется.
+        Операция идемпотентна.
+      security: [{ BearerAuth: [] }]
+      responses:
+        '204':
+          description: Все сессии пользователя завершены
+          headers:
+            Set-Cookie:
+              description: Удаляет HttpOnly cookie `refresh_token`.
+              schema:
+                type: string
+        '401':
+          description: Не авторизован
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }

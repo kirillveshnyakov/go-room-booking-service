@@ -5,10 +5,12 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/entity"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/errs"
+	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/port"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/requestctx"
 	"go.uber.org/zap"
 )
@@ -17,6 +19,20 @@ type (
 	userRepository interface {
 		Create(ctx context.Context, email string, role entity.UserRole, passwordHash string) (entity.User, error)
 		GetByEmail(ctx context.Context, email string) (entity.AuthUser, error)
+		GetByID(ctx context.Context, userID uuid.UUID) (entity.User, error)
+	}
+
+	sessionRepository interface {
+		Create(ctx context.Context, session entity.Session) (entity.Session, error)
+		GetByID(ctx context.Context, sessionID uuid.UUID) (entity.Session, error)
+		RotateRefreshToken(
+			ctx context.Context,
+			sessionID uuid.UUID,
+			oldRefreshTokenHash []byte,
+			newRefreshTokenHash []byte,
+		) (entity.Session, error)
+		Revoke(ctx context.Context, sessionID uuid.UUID, revokedAt time.Time) error
+		RevokeAllByUser(ctx context.Context, userID uuid.UUID, revokedAt time.Time) error
 	}
 
 	passwordHasher interface {
@@ -24,29 +40,43 @@ type (
 		Compare(hash, password string) error
 	}
 
-	tokenIssuer interface {
+	accessTokenManager interface {
 		CreateAccessToken(identity entity.Identity) (string, error)
+	}
+
+	refreshTokenManager interface {
+		CreateRefreshToken(sessionID uuid.UUID) (rawToken string, hash []byte, err error)
+		ParseRefreshToken(rawToken string) (sessionID uuid.UUID, hash []byte, err error)
 	}
 )
 
 type authService struct {
-	userRepository userRepository
-	passwordHasher passwordHasher
-	tokenIssuer    tokenIssuer
-	logger         *zap.Logger
+	userRepository      userRepository
+	sessionRepository   sessionRepository
+	passwordHasher      passwordHasher
+	accessTokenManager  accessTokenManager
+	refreshTokenManager refreshTokenManager
+	sessionTTL          time.Duration
+	logger              *zap.Logger
 }
 
 func NewAuthService(
 	userRepository userRepository,
+	sessionRepository sessionRepository,
 	passwordHasher passwordHasher,
-	tokenIssuer tokenIssuer,
+	accessTokenManager accessTokenManager,
+	refreshTokenManager refreshTokenManager,
+	sessionTTL time.Duration,
 	logger *zap.Logger,
 ) *authService {
 	return &authService{
-		userRepository: userRepository,
-		passwordHasher: passwordHasher,
-		tokenIssuer:    tokenIssuer,
-		logger:         logger,
+		userRepository:      userRepository,
+		sessionRepository:   sessionRepository,
+		passwordHasher:      passwordHasher,
+		accessTokenManager:  accessTokenManager,
+		refreshTokenManager: refreshTokenManager,
+		sessionTTL:          sessionTTL,
+		logger:              logger,
 	}
 }
 
@@ -118,7 +148,7 @@ func (service *authService) Login(
 	ctx context.Context,
 	email string,
 	password string,
-) (string, error) {
+) (port.AuthTokens, error) {
 	log := requestctx.LoggerOrDefault(ctx, service.logger).Named("auth_usecase")
 
 	email = strings.TrimSpace(strings.ToLower(email))
@@ -126,7 +156,7 @@ func (service *authService) Login(
 	authUser, err := service.userRepository.GetByEmail(ctx, email)
 	if err != nil {
 		if errors.Is(err, errs.ErrUserNotFound) {
-			return "", errs.ErrInvalidCredentials
+			return port.AuthTokens{}, errs.ErrInvalidCredentials
 		}
 
 		log.Error(
@@ -134,12 +164,12 @@ func (service *authService) Login(
 			zap.Error(err),
 		)
 
-		return "", fmt.Errorf("auth usecase - login: %w", err)
+		return port.AuthTokens{}, fmt.Errorf("auth usecase - login: %w", err)
 	}
 
 	if err = service.passwordHasher.Compare(authUser.PasswordHash, password); err != nil {
 		if errors.Is(err, errs.ErrInvalidCredentials) {
-			return "", errs.ErrInvalidCredentials
+			return port.AuthTokens{}, errs.ErrInvalidCredentials
 		}
 
 		log.Error(
@@ -147,24 +177,195 @@ func (service *authService) Login(
 			zap.Error(err),
 		)
 
-		return "", fmt.Errorf("auth usecase - login: %w", err)
+		return port.AuthTokens{}, fmt.Errorf("auth usecase - login: %w", err)
 	}
 
-	token, generateErr := service.tokenIssuer.CreateAccessToken(entity.Identity{
-		UserID:    authUser.User.ID,
-		SessionID: uuid.New(),
-		Role:      authUser.User.Role,
-	})
-	if generateErr != nil {
+	sessionID := uuid.New()
+
+	refreshToken, refreshHash, refreshTokenErr := service.refreshTokenManager.CreateRefreshToken(sessionID)
+	if refreshTokenErr != nil {
 		log.Error(
 			"login failed",
-			zap.Error(generateErr),
+			zap.Error(refreshTokenErr),
 		)
 
-		return "", fmt.Errorf("auth usecase - login: %w", generateErr)
+		return port.AuthTokens{}, fmt.Errorf("auth usecase - login: %w", refreshTokenErr)
 	}
 
-	return token, nil
+	accessToken, accessTokenErr := service.accessTokenManager.CreateAccessToken(entity.Identity{
+		UserID:    authUser.User.ID,
+		SessionID: sessionID,
+		Role:      authUser.User.Role,
+	})
+	if accessTokenErr != nil {
+		log.Error(
+			"login failed",
+			zap.Error(accessTokenErr),
+		)
+
+		return port.AuthTokens{}, fmt.Errorf("auth usecase - login: %w", accessTokenErr)
+	}
+
+	session := entity.Session{
+		ID:               sessionID,
+		UserID:           authUser.User.ID,
+		RefreshTokenHash: refreshHash,
+		ExpiresAt:        time.Now().UTC().Add(service.sessionTTL),
+	}
+
+	_, err = service.sessionRepository.Create(ctx, session)
+	if err != nil {
+		log.Error(
+			"login failed",
+			zap.Error(err),
+		)
+
+		return port.AuthTokens{}, fmt.Errorf("auth usecase - login: %w", err)
+	}
+
+	return port.AuthTokens{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	}, nil
+}
+
+func (service *authService) Refresh(
+	ctx context.Context,
+	rawRefreshToken string,
+) (port.AuthTokens, error) {
+	log := requestctx.LoggerOrDefault(ctx, service.logger).Named("auth_usecase")
+
+	sessionID, oldRefreshTokenHash, err := service.refreshTokenManager.ParseRefreshToken(rawRefreshToken)
+	if err != nil {
+		if errors.Is(err, errs.ErrInvalidRefreshToken) {
+			return port.AuthTokens{}, errs.ErrInvalidRefreshToken
+		}
+
+		log.Error("token refresh failed", zap.Error(err))
+		return port.AuthTokens{}, fmt.Errorf("auth usecase - refresh: parse refresh token: %w", err)
+	}
+
+	session, err := service.sessionRepository.GetByID(ctx, sessionID)
+	if err != nil {
+		if errors.Is(err, errs.ErrSessionNotFound) {
+			return port.AuthTokens{}, errs.ErrInvalidRefreshToken
+		}
+
+		log.Error("token refresh failed", zap.Error(err))
+		return port.AuthTokens{}, fmt.Errorf("auth usecase - refresh: get session: %w", err)
+	}
+
+	if session.IsRevoked() || session.IsExpired(time.Now().UTC()) {
+		return port.AuthTokens{}, errs.ErrInvalidRefreshToken
+	}
+
+	user, err := service.userRepository.GetByID(ctx, session.UserID)
+	if err != nil {
+		if errors.Is(err, errs.ErrUserNotFound) {
+			return port.AuthTokens{}, errs.ErrInvalidRefreshToken
+		}
+
+		log.Error("token refresh failed", zap.Error(err))
+		return port.AuthTokens{}, fmt.Errorf("auth usecase - refresh: get user: %w", err)
+	}
+
+	newRefreshToken, newRefreshTokenHash, err := service.refreshTokenManager.CreateRefreshToken(session.ID)
+	if err != nil {
+		log.Error("token refresh failed", zap.Error(err))
+		return port.AuthTokens{}, fmt.Errorf("auth usecase - refresh: create refresh token: %w", err)
+	}
+
+	accessToken, err := service.accessTokenManager.CreateAccessToken(entity.Identity{
+		UserID:    session.UserID,
+		SessionID: session.ID,
+		Role:      user.Role,
+	})
+	if err != nil {
+		log.Error("token refresh failed", zap.Error(err))
+		return port.AuthTokens{}, fmt.Errorf("auth usecase - refresh: create access token: %w", err)
+	}
+
+	_, err = service.sessionRepository.RotateRefreshToken(
+		ctx,
+		session.ID,
+		oldRefreshTokenHash,
+		newRefreshTokenHash,
+	)
+	if err != nil {
+		if errors.Is(err, errs.ErrInvalidRefreshToken) {
+			return port.AuthTokens{}, errs.ErrInvalidRefreshToken
+		}
+
+		log.Error("token refresh failed", zap.Error(err))
+		return port.AuthTokens{}, fmt.Errorf("auth usecase - refresh: rotate refresh token: %w", err)
+	}
+
+	log.Info(
+		"tokens refreshed",
+		zap.String("user_id", session.UserID.String()),
+		zap.String("session_id", session.ID.String()),
+	)
+
+	return port.AuthTokens{
+		AccessToken:  accessToken,
+		RefreshToken: newRefreshToken,
+	}, nil
+}
+
+func (service *authService) Logout(
+	ctx context.Context,
+	sessionID uuid.UUID,
+) error {
+	log := requestctx.LoggerOrDefault(ctx, service.logger).Named("auth_usecase")
+
+	if sessionID == uuid.Nil {
+		return fmt.Errorf("auth usecase - logout: validation error: %w", errs.ErrSessionIDRequired)
+	}
+
+	if err := service.sessionRepository.Revoke(ctx, sessionID, time.Now().UTC()); err != nil {
+		log.Error(
+			"logout failed",
+			zap.String("session_id", sessionID.String()),
+			zap.Error(err),
+		)
+
+		return fmt.Errorf("auth usecase - logout: %w", err)
+	}
+
+	log.Info(
+		"session revoked",
+		zap.String("session_id", sessionID.String()),
+	)
+
+	return nil
+}
+
+func (service *authService) LogoutAll(
+	ctx context.Context,
+	userID uuid.UUID,
+) error {
+	log := requestctx.LoggerOrDefault(ctx, service.logger).Named("auth_usecase")
+
+	if userID == uuid.Nil {
+		return fmt.Errorf("auth usecase - logout all: validation error: %w", errs.ErrIdentityUserIDRequired)
+	}
+
+	if err := service.sessionRepository.RevokeAllByUser(ctx, userID, time.Now().UTC()); err != nil {
+		log.Error(
+			"logout all failed",
+			zap.String("user_id", userID.String()),
+			zap.Error(err),
+		)
+
+		return fmt.Errorf("auth usecase - logout all: %w", err)
+	}
+
+	log.Info(
+		"all user sessions revoked",
+		zap.String("user_id", userID.String()),
+	)
+
+	return nil
 }
 
 var (
@@ -191,7 +392,7 @@ func (service *authService) DummyLogin(
 		id = dummyUserID
 	}
 
-	token, generateErr := service.tokenIssuer.CreateAccessToken(entity.Identity{
+	token, generateErr := service.accessTokenManager.CreateAccessToken(entity.Identity{
 		UserID:    id,
 		SessionID: uuid.New(),
 		Role:      role,

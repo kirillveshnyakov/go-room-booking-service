@@ -42,6 +42,7 @@ func (repo *sessionRepository) Create(
 	session entity.Session,
 ) (entity.Session, error) {
 	createdSession, err := repo.getQueries(ctx).CreateSession(ctx, sqlcgen.CreateSessionParams{
+		ID:               session.ID,
 		UserID:           session.UserID,
 		RefreshTokenHash: session.RefreshTokenHash,
 		ExpiresAt:        timeToPG(session.ExpiresAt),
@@ -121,7 +122,7 @@ func (repo *sessionRepository) RotateRefreshToken(
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return entity.Session{}, errs.ErrSessionNotFound
+			return entity.Session{}, errs.ErrInvalidRefreshToken
 		}
 
 		return entity.Session{}, fmt.Errorf("session repository - rotate refresh token: %w", err)

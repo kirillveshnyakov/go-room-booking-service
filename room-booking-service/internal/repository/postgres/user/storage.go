@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgerrcode"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
@@ -92,6 +93,27 @@ func (repo *userRepository) GetByEmail(
 			CreatedAt: user.CreatedAt.Time.UTC(),
 		},
 		PasswordHash: user.PasswordHash,
+	}, nil
+}
+
+func (repo *userRepository) GetByID(
+	ctx context.Context,
+	userID uuid.UUID,
+) (entity.User, error) {
+	user, err := repo.getQueries(ctx).GetUserByID(ctx, userID)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return entity.User{}, errs.ErrUserNotFound
+		}
+
+		return entity.User{}, fmt.Errorf("user repository - get by id: %w", err)
+	}
+
+	return entity.User{
+		ID:        user.ID,
+		Email:     user.Email,
+		Role:      entity.UserRole(user.Role),
+		CreatedAt: user.CreatedAt.Time.UTC(),
 	}, nil
 }
 
