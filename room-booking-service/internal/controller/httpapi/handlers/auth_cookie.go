@@ -7,46 +7,39 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const (
-	refreshCookieName = "refresh_token"
-	refreshCookiePath = "/refresh"
-)
-
 type RefreshCookieConfig struct {
-	Secure bool
+	Name     string
+	Path     string
+	Secure   bool
+	SameSite http.SameSite
+	TTL      time.Duration
 }
 
 func (h *AuthHandler) setRefreshCookie(
 	c *gin.Context,
 	refreshToken string,
-	expiresAt time.Time,
 ) {
-	maxAge := int(time.Until(expiresAt).Seconds())
-	if maxAge < 1 {
-		maxAge = 1
-	}
-
 	http.SetCookie(c.Writer, &http.Cookie{
-		Name:     refreshCookieName,
+		Name:     h.refreshCookieConfig.Name,
 		Value:    refreshToken,
-		Path:     refreshCookiePath,
-		Expires:  expiresAt.UTC(),
-		MaxAge:   maxAge,
+		Path:     h.refreshCookieConfig.Path,
+		Expires:  time.Now().UTC().Add(h.refreshCookieConfig.TTL),
+		MaxAge:   int(h.refreshCookieConfig.TTL.Seconds()),
 		Secure:   h.refreshCookieConfig.Secure,
 		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: h.refreshCookieConfig.SameSite,
 	})
 }
 
 func (h *AuthHandler) clearRefreshCookie(c *gin.Context) {
 	http.SetCookie(c.Writer, &http.Cookie{
-		Name:     refreshCookieName,
+		Name:     h.refreshCookieConfig.Name,
 		Value:    "",
-		Path:     refreshCookiePath,
+		Path:     h.refreshCookieConfig.Path,
 		Expires:  time.Unix(1, 0).UTC(),
 		MaxAge:   -1,
 		Secure:   h.refreshCookieConfig.Secure,
 		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: h.refreshCookieConfig.SameSite,
 	})
 }

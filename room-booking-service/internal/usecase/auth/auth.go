@@ -213,6 +213,15 @@ func (service *authService) Login(
 		ExpiresAt:        time.Now().UTC().Add(service.sessionTTL),
 	}
 
+	if err = session.Validate(); err != nil {
+		log.Error(
+			"login failed",
+			zap.Error(err),
+		)
+
+		return port.AuthTokens{}, fmt.Errorf("auth usecase - login: validation error: %w", err)
+	}
+
 	_, err = service.sessionRepository.Create(ctx, session)
 	if err != nil {
 		log.Error(

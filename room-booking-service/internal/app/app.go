@@ -128,7 +128,11 @@ func Run(cfg *config.Config) error {
 	authHandler := handlers.NewAuthHandler(
 		authService,
 		handlers.RefreshCookieConfig{
-			Secure: cfg.Auth.RefreshCookieSecure,
+			Name:     cfg.Auth.RefreshCookieName,
+			Path:     cfg.Auth.RefreshCookiePath,
+			Secure:   cfg.Auth.RefreshCookieSecure,
+			SameSite: parseSameSite(cfg.Auth.RefreshCookieSameSite),
+			TTL:      cfg.Auth.SessionTTL,
 		},
 	)
 	roomHandler := handlers.NewRoomHandler(roomService)
@@ -143,6 +147,15 @@ func Run(cfg *config.Config) error {
 	if err != nil {
 		return fmt.Errorf("initialize rate limiter: %w", err)
 	}
+
+	authRateLimiter, err := middleware.NewIPRateLimiter(
+		rate.Limit(cfg.Auth.AuthRateLimit),
+		cfg.Auth.AuthRateLimitBurst,
+	)
+	if err != nil {
+		return fmt.Errorf("initialize auth rate limiter: %w", err)
+	}
+
 	router := httpapi.NewRouter(
 		authHandler,
 		roomHandler,
@@ -154,7 +167,9 @@ func Run(cfg *config.Config) error {
 		middleware.Logging(logger),
 		middleware.Recovery(logger),
 		middleware.RateLimit(rateLimiter),
+		middleware.IPRateLimit(authRateLimiter),
 		middleware.ConcurrencyLimit(cfg.HTTP.ConcurrencyLimit),
+		cfg,
 	)
 
 	server := httpserver.New(router, httpserver.Config{
@@ -205,4 +220,15 @@ func runHTTPServer(ctx context.Context, logger *zap.Logger, cfg *config.Config, 
 	logger.Info("http server gracefully shutdown")
 
 	return <-serveErr
+}
+
+func parseSameSite(value string) http.SameSite {
+	switch value {
+	case "strict":
+		return http.SameSiteStrictMode
+	case "none":
+		return http.SameSiteNoneMode
+	default:
+		return http.SameSiteLaxMode
+	}
 }

@@ -389,6 +389,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/AccessTokenResponse'
+        '400':
+          description: Неверный запрос (некорректный JSON или ошибка валидации)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ErrorResponse' }
         '401':
           description: Неверные учётные данные
           content:
@@ -943,12 +948,13 @@ paths:
   /bookings/{bookingId}/cancel:
     post:
       tags: [Bookings]
-      summary: Отменить бронь (только своя бронь, только user)
+      summary: Отменить бронь (user — только свою, admin — любую)
       description: >
-        Доступно только роли user. Пользователь может отменить только свою бронь.
+        Пользователь с ролью `user` может отменить только свою бронь.
+        Пользователь с ролью `admin` может отменить любую бронь.
         Операция **идемпотентна**: повторный вызов на уже отменённой брони не является ошибкой
         и возвращает 200 с актуальным состоянием брони (status: cancelled).
-        При попытке отменить чужую бронь — 403.
+        При попытке пользователя отменить чужую бронь — 403.
         При отсутствии брони с указанным ID — 404.
       security: [{ BearerAuth: [] }]
       parameters:
@@ -969,7 +975,7 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }
         '403':
-          description: Не своя бронь или роль не user
+          description: Пользователь с ролью user пытается отменить чужую бронь
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ErrorResponse' }

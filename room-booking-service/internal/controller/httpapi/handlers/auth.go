@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -10,6 +11,7 @@ import (
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/controller/httpapi/httperror"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/controller/httpapi/mapper"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/entity"
+	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/errs"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/port"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/requestctx"
 )
@@ -75,24 +77,29 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 
-	h.setRefreshCookie(c, tokens.RefreshToken, tokens.RefreshTokenExpiresAt)
+	h.setRefreshCookie(c, tokens.RefreshToken)
 	c.JSON(http.StatusOK, mapper.AuthTokensToAccessTokenResponse(tokens))
 }
 
 func (h *AuthHandler) Refresh(c *gin.Context) {
-	refreshToken, err := c.Cookie(refreshCookieName)
+	refreshToken, err := c.Cookie(h.refreshCookieConfig.Name)
 	if err != nil {
+		h.clearRefreshCookie(c)
 		writeUnauthorized(c)
 		return
 	}
 
 	tokens, err := h.authUsecase.Refresh(c.Request.Context(), refreshToken)
 	if err != nil {
+		if errors.Is(err, errs.ErrInvalidRefreshToken) {
+			h.clearRefreshCookie(c)
+		}
+
 		httperror.HandleError(c, err)
 		return
 	}
 
-	h.setRefreshCookie(c, tokens.RefreshToken, tokens.RefreshTokenExpiresAt)
+	h.setRefreshCookie(c, tokens.RefreshToken)
 	c.JSON(http.StatusOK, mapper.AuthTokensToAccessTokenResponse(tokens))
 }
 
