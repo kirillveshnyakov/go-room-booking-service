@@ -71,3 +71,50 @@ func (i *Identity) Validate() error {
 
 	return nil
 }
+
+type Session struct {
+	ID               uuid.UUID
+	UserID           uuid.UUID
+	RefreshTokenHash []byte
+
+	ExpiresAt time.Time
+	RevokedAt *time.Time
+
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+func (s *Session) Normalize() {
+	s.CreatedAt = normalizeTime(s.CreatedAt)
+	s.UpdatedAt = normalizeTime(s.UpdatedAt)
+	s.ExpiresAt = normalizeTime(s.ExpiresAt)
+	if s.RevokedAt != nil {
+		*s.RevokedAt = normalizeTime(*s.RevokedAt)
+	}
+}
+
+func (s *Session) Validate() error {
+	s.Normalize()
+
+	if s.UserID == uuid.Nil {
+		return errs.ErrSessionUserIDRequired
+	}
+
+	if len(s.RefreshTokenHash) == 0 {
+		return errs.ErrSessionRefreshHashRequired
+	}
+
+	if s.ExpiresAt.IsZero() {
+		return errs.ErrSessionExpiresAtRequired
+	}
+
+	return nil
+}
+
+func (s *Session) IsExpired(now time.Time) bool {
+	return !now.Before(s.ExpiresAt)
+}
+
+func (s *Session) IsRevoked() bool {
+	return s.RevokedAt != nil
+}

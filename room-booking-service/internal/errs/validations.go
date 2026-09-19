@@ -33,4 +33,10 @@ var (
 	ErrScheduleRoomIDRequired = errors.New("schedule room id is required")
 	ErrScheduleRulesRequired  = errors.New("schedule rules are required")
 	ErrScheduleDuplicateDay   = errors.New("duplicate schedule rule day")
+
+	ErrSessionUserIDRequired      = errors.New("session user id is required")
+	ErrSessionRefreshHashRequired = errors.New("session refresh hash is required")
+	ErrSessionExpiresAtRequired   = errors.New("session expires at required")
+	ErrSessionExpirationInvalid   = errors.New("session expiration invalid")
+	ErrSessionRevokedAtInvalid    = errors.New("session revoked at required")
 )

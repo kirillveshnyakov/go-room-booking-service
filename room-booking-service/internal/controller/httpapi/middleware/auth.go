@@ -13,7 +13,7 @@ import (
 )
 
 type tokenVerifier interface {
-	VerifyToken(string) (entity.Identity, error)
+	VerifyAccessToken(string) (entity.Identity, error)
 }
 
 func bearerToken(header string) (string, bool) {
@@ -35,7 +35,7 @@ func Authentication(verifier tokenVerifier, fallbackLogger *zap.Logger) gin.Hand
 			return
 		}
 
-		identity, err := verifier.VerifyToken(token)
+		identity, err := verifier.VerifyAccessToken(token)
 		if err != nil {
 			unauthorized(c)
 			return

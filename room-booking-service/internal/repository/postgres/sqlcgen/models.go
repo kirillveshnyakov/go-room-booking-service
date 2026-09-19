@@ -119,6 +119,16 @@ type Schedule struct {
 	CreatedAt pgtype.Timestamptz
 }
 
+type Session struct {
+	ID               uuid.UUID
+	UserID           uuid.UUID
+	RefreshTokenHash []byte
+	ExpiresAt        pgtype.Timestamptz
+	RevokedAt        pgtype.Timestamptz
+	CreatedAt        pgtype.Timestamptz
+	UpdatedAt        pgtype.Timestamptz
+}
+
 type Slot struct {
 	ID      uuid.UUID
 	RoomID  uuid.UUID

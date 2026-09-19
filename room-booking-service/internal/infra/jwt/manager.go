@@ -52,7 +52,7 @@ func NewTokenManager(
 	}, nil
 }
 
-func (manager *tokenManager) GenerateToken(identity entity.Identity) (string, error) {
+func (manager *tokenManager) CreateAccessToken(identity entity.Identity) (string, error) {
 	if err := identity.Validate(); err != nil {
 		return "", fmt.Errorf("jwt token manager - generate token: validate identity: %w", err)
 	}
@@ -80,7 +80,7 @@ func (manager *tokenManager) GenerateToken(identity entity.Identity) (string, er
 	return signedToken, nil
 }
 
-func (manager *tokenManager) VerifyToken(tokenString string) (entity.Identity, error) {
+func (manager *tokenManager) VerifyAccessToken(tokenString string) (entity.Identity, error) {
 	token, err := jwt.ParseWithClaims(
 		tokenString,
 		&claims{},
