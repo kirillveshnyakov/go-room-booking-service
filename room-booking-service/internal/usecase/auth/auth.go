@@ -224,8 +224,9 @@ func (service *authService) Login(
 	}
 
 	return port.AuthTokens{
-		AccessToken:  accessToken,
-		RefreshToken: refreshToken,
+		AccessToken:           accessToken,
+		RefreshToken:          refreshToken,
+		RefreshTokenExpiresAt: session.ExpiresAt,
 	}, nil
 }
 
@@ -307,8 +308,9 @@ func (service *authService) Refresh(
 	)
 
 	return port.AuthTokens{
-		AccessToken:  accessToken,
-		RefreshToken: newRefreshToken,
+		AccessToken:           accessToken,
+		RefreshToken:          newRefreshToken,
+		RefreshTokenExpiresAt: session.ExpiresAt,
 	}, nil
 }
 

@@ -41,6 +41,8 @@ type (
 		AccessTokenIssuer   string        `env:"ACCESS_TOKEN_ISSUER" envDefault:"room-booking-service"`
 		AccessTokenAudience string        `env:"ACCESS_TOKEN_AUDIENCE" envDefault:"room-booking-api"`
 		AccessTokenTTL      time.Duration `env:"ACCESS_TOKEN_TTL" envDefault:"15m"`
+		SessionTTL          time.Duration `env:"SESSION_TTL" envDefault:"720h"`
+		RefreshCookieSecure bool          `env:"REFRESH_COOKIE_SECURE" envDefault:"false"`
 	}
 
 	ConferenceConfig struct {

@@ -37,12 +37,15 @@ func NewRouter(
 	// Public
 	router.POST("/register", authHandler.Register)
 	router.POST("/login", authHandler.Login)
+	router.POST("/refresh", authHandler.Refresh)
 	router.POST("/dummyLogin", authHandler.DummyLogin)
 
 	// Protected
 	protected := router.Group("/")
 	protected.Use(authMiddleware)
 
+	protected.POST("/logout", authHandler.Logout)
+	protected.POST("/logout-all", authHandler.LogoutAll)
 	protected.GET("/rooms/list", roomHandler.List)
 
 	protected.GET(

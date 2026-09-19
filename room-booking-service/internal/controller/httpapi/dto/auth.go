@@ -27,6 +27,10 @@ type TokenResponse struct {
 	Token string `json:"token"`
 }
 
+type AccessTokenResponse struct {
+	AccessToken string `json:"access_token"`
+}
+
 type DummyLoginRequest struct {
 	Role string `json:"role" binding:"required,oneof=admin user"`
 }

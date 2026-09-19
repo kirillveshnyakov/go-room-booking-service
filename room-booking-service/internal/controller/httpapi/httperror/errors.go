@@ -58,7 +58,8 @@ func mapError(err error) (status int, code, message string) {
 
 	switch {
 	case errors.Is(err, errs.ErrUnauthorized),
-		errors.Is(err, errs.ErrInvalidCredentials):
+		errors.Is(err, errs.ErrInvalidCredentials),
+		errors.Is(err, errs.ErrInvalidRefreshToken):
 		return http.StatusUnauthorized, CodeUnauthorized, errs.ErrUnauthorized.Error()
 
 	case errors.Is(err, errs.ErrForbidden):

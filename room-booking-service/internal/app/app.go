@@ -20,9 +20,11 @@ import (
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/infra/password"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/infra/postgres"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/infra/postgres/transactor"
+	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/infra/refreshtoken"
 	bookingDB "github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/repository/postgres/booking"
 	roomDB "github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/repository/postgres/room"
 	scheduleDB "github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/repository/postgres/schedule"
+	sessionDB "github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/repository/postgres/session"
 	slotDB "github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/repository/postgres/slot"
 	userDB "github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/repository/postgres/user"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/usecase/auth"
@@ -71,15 +73,16 @@ func Run(cfg *config.Config) error {
 		return fmt.Errorf("initialize password hasher: %w", err)
 	}
 
-	tokenManager, err := jwt.NewTokenManager(
+	accessTokenManager, err := jwt.NewTokenManager(
 		cfg.Auth.JWTSecret,
 		cfg.Auth.AccessTokenIssuer,
 		cfg.Auth.AccessTokenAudience,
 		cfg.Auth.AccessTokenTTL,
 	)
 	if err != nil {
-		return fmt.Errorf("initialize token manager: %w", err)
+		return fmt.Errorf("initialize access token manager: %w", err)
 	}
+	refreshTokenManager := refreshtoken.NewTokenManager()
 
 	linkGenerator, err := conference.NewLinkGenerator(cfg.Conference.BaseURL)
 	if err != nil {
@@ -91,11 +94,15 @@ func Run(cfg *config.Config) error {
 	roomRepository := roomDB.NewRoomRepository(pool)
 	bookingRepository := bookingDB.NewBookingRepository(pool, txManager)
 	scheduleRepository := scheduleDB.NewScheduleRepository(pool, txManager)
+	sessionRepository := sessionDB.NewSessionRepository(pool)
 
 	authService := auth.NewAuthService(
 		userRepository,
+		sessionRepository,
 		passwordHasher,
-		tokenManager,
+		accessTokenManager,
+		refreshTokenManager,
+		cfg.Auth.SessionTTL,
 		logger,
 	)
 	roomService := room.NewRoomService(
@@ -118,7 +125,12 @@ func Run(cfg *config.Config) error {
 		logger,
 	)
 
-	authHandler := handlers.NewAuthHandler(authService)
+	authHandler := handlers.NewAuthHandler(
+		authService,
+		handlers.RefreshCookieConfig{
+			Secure: cfg.Auth.RefreshCookieSecure,
+		},
+	)
 	roomHandler := handlers.NewRoomHandler(roomService)
 	scheduleHandler := handlers.NewScheduleHandler(scheduleService)
 	slotHandler := handlers.NewSlotHandler(slotService)
@@ -137,7 +149,7 @@ func Run(cfg *config.Config) error {
 		scheduleHandler,
 		slotHandler,
 		bookingHandler,
-		middleware.Authentication(tokenManager, logger),
+		middleware.Authentication(accessTokenManager, logger),
 		middleware.RequestID(logger),
 		middleware.Logging(logger),
 		middleware.Recovery(logger),
