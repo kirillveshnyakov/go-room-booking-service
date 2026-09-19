@@ -84,6 +84,8 @@ type Session struct {
 	UpdatedAt time.Time
 }
 
+const sessionRefreshTokenHashSize = 32
+
 func (s *Session) Normalize() {
 	s.CreatedAt = normalizeTime(s.CreatedAt)
 	s.UpdatedAt = normalizeTime(s.UpdatedAt)
@@ -102,6 +104,9 @@ func (s *Session) Validate() error {
 
 	if len(s.RefreshTokenHash) == 0 {
 		return errs.ErrSessionRefreshHashRequired
+	}
+	if len(s.RefreshTokenHash) != sessionRefreshTokenHashSize {
+		return errs.ErrSessionRefreshHashInvalid
 	}
 
 	if s.ExpiresAt.IsZero() {

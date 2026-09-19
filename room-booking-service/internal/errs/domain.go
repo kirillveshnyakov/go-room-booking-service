@@ -9,6 +9,7 @@ var (
 	ErrBookingNotFound      = errors.New("booking not found")
 	ErrScheduleNotFound     = errors.New("schedule not found")
 	ErrScheduleRuleNotFound = errors.New("schedule rule not found")
+	ErrSessionNotFound      = errors.New("session not found")
 
 	ErrUserEmailAlreadyExists = errors.New("user email already exists")
 	ErrScheduleAlreadyExists  = errors.New("schedule already exists")
@@ -21,4 +22,6 @@ var (
 	ErrUnauthorized       = errors.New("unauthorized")
 	ErrForbidden          = errors.New("forbidden")
 	ErrInvalidCredentials = errors.New("invalid credentials")
+
+	ErrInvalidRefreshToken = errors.New("invalid refresh token")
 )

@@ -36,6 +36,7 @@ var (
 
 	ErrSessionUserIDRequired      = errors.New("session user id is required")
 	ErrSessionRefreshHashRequired = errors.New("session refresh hash is required")
+	ErrSessionRefreshHashInvalid  = errors.New("session refresh hash must be 32 bytes")
 	ErrSessionExpiresAtRequired   = errors.New("session expires at required")
 	ErrSessionExpirationInvalid   = errors.New("session expiration invalid")
 	ErrSessionRevokedAtInvalid    = errors.New("session revoked at required")
