@@ -17,5 +17,12 @@ CREATE TABLE sessions
 CREATE INDEX sessions_user_id_idx
     ON sessions (user_id);
 
+CREATE TRIGGER sessions_set_updated_at
+    BEFORE UPDATE
+    ON sessions
+    FOR EACH ROW
+EXECUTE FUNCTION set_updated_at();
+
 -- +goose Down
+DROP TRIGGER IF EXISTS sessions_set_updated_at ON sessions;
 DROP TABLE IF EXISTS sessions;
