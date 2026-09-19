@@ -36,9 +36,13 @@ func NewRoomService(
 
 func (service *roomService) Create(
 	ctx context.Context,
+	actor entity.Identity,
 	params port.CreateRoomParams,
 ) (entity.Room, error) {
 	log := requestctx.LoggerOrDefault(ctx, service.logger).Named("room_usecase")
+	if err := actor.Validate(); err != nil || actor.Role != entity.UserRoleAdmin {
+		return entity.Room{}, errs.ErrForbidden
+	}
 
 	room := entity.Room{
 		Name:        params.Name,
@@ -71,8 +75,14 @@ func (service *roomService) Create(
 	return createdRoom, nil
 }
 
-func (service *roomService) List(ctx context.Context) ([]entity.Room, error) {
+func (service *roomService) List(
+	ctx context.Context,
+	actor entity.Identity,
+) ([]entity.Room, error) {
 	log := requestctx.LoggerOrDefault(ctx, service.logger).Named("room_usecase")
+	if err := actor.Validate(); err != nil {
+		return nil, errs.ErrForbidden
+	}
 
 	list, err := service.roomRepository.List(ctx)
 	if err != nil {

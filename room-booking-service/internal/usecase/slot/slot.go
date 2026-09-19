@@ -52,10 +52,14 @@ func NewSlotService(
 
 func (service *slotService) ListFree(
 	ctx context.Context,
+	actor entity.Identity,
 	roomID uuid.UUID,
 	targetDate time.Time,
 ) ([]entity.Slot, error) {
 	log := requestctx.LoggerOrDefault(ctx, service.logger).Named("slot_usecase")
+	if err := actor.Validate(); err != nil {
+		return nil, errs.ErrForbidden
+	}
 
 	targetDate = targetDate.UTC()
 

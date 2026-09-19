@@ -6,12 +6,12 @@ import (
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
-	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/controller/httpapi/ctxvalues"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/controller/httpapi/dto"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/controller/httpapi/httperror"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/controller/httpapi/mapper"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/entity"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/port"
+	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/requestctx"
 )
 
 type (
@@ -97,13 +97,13 @@ func (h *AuthHandler) Refresh(c *gin.Context) {
 }
 
 func (h *AuthHandler) Logout(c *gin.Context) {
-	sessionID, ok := ctxvalues.GetSessionID(c)
+	actor, ok := requestctx.Identity(c.Request.Context())
 	if !ok {
 		writeUnauthorized(c)
 		return
 	}
 
-	if err := h.authUsecase.Logout(c.Request.Context(), sessionID); err != nil {
+	if err := h.authUsecase.Logout(c.Request.Context(), actor.SessionID); err != nil {
 		httperror.HandleError(c, err)
 		return
 	}
@@ -113,13 +113,13 @@ func (h *AuthHandler) Logout(c *gin.Context) {
 }
 
 func (h *AuthHandler) LogoutAll(c *gin.Context) {
-	userID, ok := ctxvalues.GetUserID(c)
+	actor, ok := requestctx.Identity(c.Request.Context())
 	if !ok {
 		writeUnauthorized(c)
 		return
 	}
 
-	if err := h.authUsecase.LogoutAll(c.Request.Context(), userID); err != nil {
+	if err := h.authUsecase.LogoutAll(c.Request.Context(), actor.UserID); err != nil {
 		httperror.HandleError(c, err)
 		return
 	}

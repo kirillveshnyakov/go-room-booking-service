@@ -14,10 +14,11 @@ import (
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/controller/httpapi/httperror"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/controller/httpapi/mapper"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/entity"
+	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/requestctx"
 )
 
 type scheduleUsecase interface {
-	Create(ctx context.Context, roomID uuid.UUID, rules []entity.ScheduleRule) (entity.Schedule, error)
+	Create(ctx context.Context, actor entity.Identity, roomID uuid.UUID, rules []entity.ScheduleRule) (entity.Schedule, error)
 }
 
 type ScheduleHandler struct {
@@ -31,6 +32,12 @@ func NewScheduleHandler(scheduleUsecase scheduleUsecase) *ScheduleHandler {
 }
 
 func (h *ScheduleHandler) Create(c *gin.Context) {
+	actor, ok := requestctx.Identity(c.Request.Context())
+	if !ok {
+		writeUnauthorized(c)
+		return
+	}
+
 	var uri dto.CreateScheduleURI
 	if err := c.ShouldBindUri(&uri); err != nil {
 		httperror.WriteError(c, http.StatusBadRequest, httperror.CodeInvalidRequest, "invalid request")
@@ -65,7 +72,7 @@ func (h *ScheduleHandler) Create(c *gin.Context) {
 		return
 	}
 
-	schedule, err := h.scheduleUsecase.Create(c.Request.Context(), roomID, rules)
+	schedule, err := h.scheduleUsecase.Create(c.Request.Context(), actor, roomID, rules)
 	if err != nil {
 		httperror.HandleError(c, err)
 		return

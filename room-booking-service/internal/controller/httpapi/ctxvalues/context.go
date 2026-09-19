@@ -8,23 +8,12 @@ import (
 
 const (
 	userIDKey    = "userID"
-	sessionIDKey = "sessionID"
 	roleKey      = "role"
 	requestIDKey = "requestID"
 )
 
 func SetUserID(c *gin.Context, userID uuid.UUID) {
 	c.Set(userIDKey, userID)
-}
-
-func SetSessionID(c *gin.Context, sessionID uuid.UUID) {
-	c.Set(sessionIDKey, sessionID)
-}
-
-func GetSessionID(c *gin.Context) (uuid.UUID, bool) {
-	value, _ := c.Get(sessionIDKey)
-	sessionID, ok := value.(uuid.UUID)
-	return sessionID, ok && sessionID != uuid.Nil
 }
 
 func GetUserID(c *gin.Context) (uuid.UUID, bool) {

@@ -42,7 +42,6 @@ func Authentication(verifier tokenVerifier, fallbackLogger *zap.Logger) gin.Hand
 		}
 
 		ctxvalues.SetUserID(c, identity.UserID)
-		ctxvalues.SetSessionID(c, identity.SessionID)
 		ctxvalues.SetRole(c, identity.Role)
 
 		ctx := c.Request.Context()

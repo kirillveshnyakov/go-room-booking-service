@@ -11,10 +11,11 @@ import (
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/controller/httpapi/httperror"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/controller/httpapi/mapper"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/entity"
+	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/requestctx"
 )
 
 type slotUsecase interface {
-	ListFree(ctx context.Context, roomID uuid.UUID, targetDate time.Time) ([]entity.Slot, error)
+	ListFree(ctx context.Context, actor entity.Identity, roomID uuid.UUID, targetDate time.Time) ([]entity.Slot, error)
 }
 
 type SlotHandler struct {
@@ -28,6 +29,12 @@ func NewSlotHandler(slotUsecase slotUsecase) *SlotHandler {
 }
 
 func (h *SlotHandler) List(c *gin.Context) {
+	actor, ok := requestctx.Identity(c.Request.Context())
+	if !ok {
+		writeUnauthorized(c)
+		return
+	}
+
 	var uri dto.ListFreeSlotsURI
 	if err := c.ShouldBindUri(&uri); err != nil {
 		httperror.WriteError(c, http.StatusBadRequest, httperror.CodeInvalidRequest, "invalid request")
@@ -52,7 +59,7 @@ func (h *SlotHandler) List(c *gin.Context) {
 		return
 	}
 
-	slots, err := h.slotUsecase.ListFree(c.Request.Context(), roomID, targetDate)
+	slots, err := h.slotUsecase.ListFree(c.Request.Context(), actor, roomID, targetDate)
 	if err != nil {
 		httperror.HandleError(c, err)
 		return

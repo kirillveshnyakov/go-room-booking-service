@@ -35,10 +35,14 @@ func NewScheduleService(
 
 func (service *scheduleService) Create(
 	ctx context.Context,
+	actor entity.Identity,
 	roomID uuid.UUID,
 	rules []entity.ScheduleRule,
 ) (entity.Schedule, error) {
 	log := requestctx.LoggerOrDefault(ctx, service.logger).Named("schedule_usecase")
+	if err := actor.Validate(); err != nil || actor.Role != entity.UserRoleAdmin {
+		return entity.Schedule{}, errs.ErrForbidden
+	}
 
 	schedule := entity.Schedule{
 		RoomID: roomID,

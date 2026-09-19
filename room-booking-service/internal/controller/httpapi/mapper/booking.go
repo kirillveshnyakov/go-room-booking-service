@@ -11,7 +11,6 @@ import (
 
 func CreateBookingRequestToParams(
 	request dto.CreateBookingRequest,
-	userID uuid.UUID,
 ) (port.CreateBookingParams, error) {
 	slotID, err := uuid.Parse(request.SlotID)
 	if err != nil {
@@ -19,7 +18,6 @@ func CreateBookingRequestToParams(
 	}
 
 	return port.CreateBookingParams{
-		UserID:               userID,
 		SlotID:               slotID,
 		CreateConferenceLink: request.CreateConferenceLink,
 	}, nil

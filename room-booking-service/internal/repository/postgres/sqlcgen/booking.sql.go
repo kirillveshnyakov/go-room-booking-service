@@ -16,16 +16,10 @@ const cancelBooking = `-- name: CancelBooking :execrows
 UPDATE bookings
 SET status = 'cancelled'
 WHERE id = $1
-  AND user_id = $2
 `
 
-type CancelBookingParams struct {
-	BookingID uuid.UUID
-	UserID    uuid.UUID
-}
-
-func (q *Queries) CancelBooking(ctx context.Context, arg CancelBookingParams) (int64, error) {
-	result, err := q.db.Exec(ctx, cancelBooking, arg.BookingID, arg.UserID)
+func (q *Queries) CancelBooking(ctx context.Context, bookingID uuid.UUID) (int64, error) {
+	result, err := q.db.Exec(ctx, cancelBooking, bookingID)
 	if err != nil {
 		return 0, err
 	}

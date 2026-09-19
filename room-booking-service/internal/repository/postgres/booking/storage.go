@@ -101,29 +101,16 @@ func (repo *bookingRepository) GetByID(
 func (repo *bookingRepository) Cancel(
 	ctx context.Context,
 	bookingID uuid.UUID,
-	userID uuid.UUID,
-) (entity.Booking, error) {
-	booking, err := repo.GetByID(ctx, bookingID)
+) error {
+	count, err := repo.getQueries(ctx).CancelBooking(ctx, bookingID)
 	if err != nil {
-		return entity.Booking{}, err
-	}
-	if booking.UserID != userID {
-		return entity.Booking{}, errs.ErrForbidden
-	}
-
-	count, err := repo.getQueries(ctx).CancelBooking(ctx, sqlcgen.CancelBookingParams{
-		BookingID: bookingID,
-		UserID:    userID,
-	})
-	if err != nil {
-		return entity.Booking{}, fmt.Errorf("booking repository - cancel: %w", err)
+		return fmt.Errorf("booking repository - cancel: %w", err)
 	}
 	if count == 0 {
-		return entity.Booking{}, errs.ErrBookingNotFound
+		return errs.ErrBookingNotFound
 	}
 
-	booking.Status = entity.BookingStatusCancelled
-	return booking, nil
+	return nil
 }
 
 func (repo *bookingRepository) List(

@@ -19,8 +19,7 @@ RETURNING
 -- name: CancelBooking :execrows
 UPDATE bookings
 SET status = 'cancelled'
-WHERE id = sqlc.arg(booking_id)
-  AND user_id = sqlc.arg(user_id);
+WHERE id = sqlc.arg(booking_id);
 
 -- name: GetBookingByID :one
 SELECT id,

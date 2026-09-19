@@ -10,11 +10,12 @@ import (
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/controller/httpapi/mapper"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/entity"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/port"
+	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/requestctx"
 )
 
 type roomUsecase interface {
-	Create(ctx context.Context, params port.CreateRoomParams) (entity.Room, error)
-	List(ctx context.Context) ([]entity.Room, error)
+	Create(ctx context.Context, actor entity.Identity, params port.CreateRoomParams) (entity.Room, error)
+	List(ctx context.Context, actor entity.Identity) ([]entity.Room, error)
 }
 
 type RoomHandler struct {
@@ -28,13 +29,19 @@ func NewRoomHandler(roomUsecase roomUsecase) *RoomHandler {
 }
 
 func (h *RoomHandler) Create(c *gin.Context) {
+	actor, ok := requestctx.Identity(c.Request.Context())
+	if !ok {
+		writeUnauthorized(c)
+		return
+	}
+
 	var request dto.CreateRoomRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		httperror.WriteError(c, http.StatusBadRequest, httperror.CodeInvalidRequest, "invalid request")
 		return
 	}
 
-	room, err := h.roomUsecase.Create(c.Request.Context(), mapper.CreateRoomRequestToParams(request))
+	room, err := h.roomUsecase.Create(c.Request.Context(), actor, mapper.CreateRoomRequestToParams(request))
 	if err != nil {
 		httperror.HandleError(c, err)
 		return
@@ -46,7 +53,13 @@ func (h *RoomHandler) Create(c *gin.Context) {
 }
 
 func (h *RoomHandler) List(c *gin.Context) {
-	rooms, err := h.roomUsecase.List(c.Request.Context())
+	actor, ok := requestctx.Identity(c.Request.Context())
+	if !ok {
+		writeUnauthorized(c)
+		return
+	}
+
+	rooms, err := h.roomUsecase.List(c.Request.Context(), actor)
 	if err != nil {
 		httperror.HandleError(c, err)
 		return

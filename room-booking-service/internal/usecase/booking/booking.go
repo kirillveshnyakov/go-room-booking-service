@@ -17,7 +17,8 @@ import (
 type (
 	bookingRepository interface {
 		Create(ctx context.Context, slotID uuid.UUID, userID uuid.UUID, conferenceLink string) (entity.Booking, error)
-		Cancel(ctx context.Context, bookingID uuid.UUID, userID uuid.UUID) (entity.Booking, error)
+		GetByID(ctx context.Context, bookingID uuid.UUID) (entity.Booking, error)
+		Cancel(ctx context.Context, bookingID uuid.UUID) error
 		List(ctx context.Context, pageLimit int, pageOffset int) ([]entity.Booking, int64, error)
 		ListUserFuture(ctx context.Context, userID uuid.UUID) ([]entity.Booking, error)
 	}
@@ -49,9 +50,13 @@ func NewBookingService(
 
 func (service *bookingService) Create(
 	ctx context.Context,
+	actor entity.Identity,
 	params port.CreateBookingParams,
 ) (entity.Booking, error) {
 	log := requestctx.LoggerOrDefault(ctx, service.logger).Named("booking_usecase")
+	if err := actor.Validate(); err != nil || actor.Role != entity.UserRoleUser {
+		return entity.Booking{}, errs.ErrForbidden
+	}
 
 	var conferenceLink string
 
@@ -69,7 +74,7 @@ func (service *bookingService) Create(
 		conferenceLink = link
 	}
 
-	booking, err := service.bookingRepository.Create(ctx, params.SlotID, params.UserID, conferenceLink)
+	booking, err := service.bookingRepository.Create(ctx, params.SlotID, actor.UserID, conferenceLink)
 	if err != nil {
 		if errors.Is(err, errs.ErrSlotNotFound) ||
 			errors.Is(err, errs.ErrSlotAlreadyBooked) ||
@@ -98,10 +103,14 @@ func (service *bookingService) Create(
 
 func (service *bookingService) List(
 	ctx context.Context,
+	actor entity.Identity,
 	page int,
 	pageSize int,
 ) ([]entity.Booking, int64, error) {
 	log := requestctx.LoggerOrDefault(ctx, service.logger).Named("booking_usecase")
+	if err := actor.Validate(); err != nil || actor.Role != entity.UserRoleAdmin {
+		return nil, 0, errs.ErrForbidden
+	}
 
 	if pageSize < 1 || pageSize > maxPageSize {
 		return nil, 0, fmt.Errorf("booking usecase - list: validation error: %w", errs.ErrPaginationPageSizeInvalid)
@@ -125,13 +134,16 @@ func (service *bookingService) List(
 	return list, total, nil
 }
 
-func (service *bookingService) ListUserFuture(
+func (service *bookingService) ListMy(
 	ctx context.Context,
-	userID uuid.UUID,
+	actor entity.Identity,
 ) ([]entity.Booking, error) {
 	log := requestctx.LoggerOrDefault(ctx, service.logger).Named("booking_usecase")
+	if err := actor.Validate(); err != nil || actor.Role != entity.UserRoleUser {
+		return nil, errs.ErrForbidden
+	}
 
-	list, err := service.bookingRepository.ListUserFuture(ctx, userID)
+	list, err := service.bookingRepository.ListUserFuture(ctx, actor.UserID)
 	if err != nil {
 		log.Error(
 			"user bookings list failed",
@@ -146,15 +158,34 @@ func (service *bookingService) ListUserFuture(
 
 func (service *bookingService) Cancel(
 	ctx context.Context,
-	userID uuid.UUID,
+	actor entity.Identity,
 	bookingID uuid.UUID,
 ) (entity.Booking, error) {
 	log := requestctx.LoggerOrDefault(ctx, service.logger).Named("booking_usecase")
+	if err := actor.Validate(); err != nil {
+		return entity.Booking{}, errs.ErrForbidden
+	}
 
-	canceledBooking, err := service.bookingRepository.Cancel(ctx, bookingID, userID)
+	booking, err := service.bookingRepository.GetByID(ctx, bookingID)
 	if err != nil {
-		if errors.Is(err, errs.ErrBookingNotFound) ||
-			errors.Is(err, errs.ErrForbidden) {
+		if errors.Is(err, errs.ErrBookingNotFound) {
+			return entity.Booking{}, err
+		}
+
+		log.Error(
+			"booking lookup for cancellation failed",
+			zap.Error(err),
+		)
+
+		return entity.Booking{}, fmt.Errorf("booking usecase - cancel: %w", err)
+	}
+	if actor.Role == entity.UserRoleUser && booking.UserID != actor.UserID {
+		return entity.Booking{}, errs.ErrForbidden
+	}
+
+	err = service.bookingRepository.Cancel(ctx, bookingID)
+	if err != nil {
+		if errors.Is(err, errs.ErrBookingNotFound) {
 			return entity.Booking{}, err
 		}
 
@@ -165,12 +196,13 @@ func (service *bookingService) Cancel(
 
 		return entity.Booking{}, fmt.Errorf("booking usecase - cancel: %w", err)
 	}
+	booking.Status = entity.BookingStatusCancelled
 
 	log.Info(
 		"booking cancelled",
-		zap.String("booking_id", canceledBooking.ID.String()),
-		zap.String("user_id", userID.String()),
+		zap.String("booking_id", booking.ID.String()),
+		zap.String("user_id", actor.UserID.String()),
 	)
 
-	return canceledBooking, nil
+	return booking, nil
 }
