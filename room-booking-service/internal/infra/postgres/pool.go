@@ -2,11 +2,14 @@ package postgres
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+const connectionRetryInterval = time.Second
 
 func NewPool(
 	ctx context.Context,
@@ -29,15 +32,26 @@ func NewPool(
 	pgxcfg.ConnConfig.RuntimeParams["application_name"] = "room-booking-service"
 	pgxcfg.ConnConfig.RuntimeParams["timezone"] = "UTC"
 
-	pool, err := pgxpool.NewWithConfig(ctx, pgxcfg)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create postgres pool: %w", err)
-	}
+	var lastErr error
 
-	if err = pool.Ping(ctx); err != nil {
-		pool.Close()
-		return nil, fmt.Errorf("failed to ping database: %w", err)
-	}
+	for {
+		pool, poolErr := pgxpool.NewWithConfig(ctx, pgxcfg)
+		if poolErr == nil {
+			pingErr := pool.Ping(ctx)
+			if pingErr == nil {
+				return pool, nil
+			}
 
-	return pool, nil
+			pool.Close()
+			lastErr = fmt.Errorf("ping database: %w", pingErr)
+		} else {
+			lastErr = fmt.Errorf("create postgres pool: %w", poolErr)
+		}
+
+		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf("connect to postgres: %w", errors.Join(lastErr, ctx.Err()))
+		case <-time.After(connectionRetryInterval):
+		}
+	}
 }

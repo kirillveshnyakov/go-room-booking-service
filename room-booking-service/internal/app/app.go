@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -52,12 +53,10 @@ func Run(cfg *config.Config) error {
 		return fmt.Errorf("initialize logger: %w", err)
 	}
 	defer func() {
-		if syncErr := logger.Sync(); syncErr != nil {
-			logger.Warn("logger sync failed", zap.Error(syncErr))
-		}
+		_ = logger.Sync()
 	}()
 
-	poolCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	poolCtx, cancel := context.WithTimeout(ctx, 15*time.Second)
 	defer cancel()
 
 	pool, err := postgres.NewPool(poolCtx, cfg.ConstructPostgresURL())
@@ -148,7 +147,7 @@ func Run(cfg *config.Config) error {
 		return fmt.Errorf("initialize rate limiter: %w", err)
 	}
 
-	authRateLimiter, err := middleware.NewIPRateLimiter(
+	authRateLimiter, err := middleware.NewGlobalRateLimiter(
 		rate.Limit(cfg.Auth.AuthRateLimit),
 		cfg.Auth.AuthRateLimitBurst,
 	)
@@ -167,7 +166,7 @@ func Run(cfg *config.Config) error {
 		middleware.Logging(logger),
 		middleware.Recovery(logger),
 		middleware.RateLimit(rateLimiter),
-		middleware.IPRateLimit(authRateLimiter),
+		middleware.GlobalRateLimit(authRateLimiter),
 		middleware.ConcurrencyLimit(cfg.HTTP.ConcurrencyLimit),
 		cfg,
 	)
@@ -223,7 +222,7 @@ func runHTTPServer(ctx context.Context, logger *zap.Logger, cfg *config.Config, 
 }
 
 func parseSameSite(value string) http.SameSite {
-	switch value {
+	switch strings.ToLower(strings.TrimSpace(value)) {
 	case "strict":
 		return http.SameSiteStrictMode
 	case "none":

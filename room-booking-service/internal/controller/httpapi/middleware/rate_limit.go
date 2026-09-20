@@ -2,9 +2,7 @@ package middleware
 
 import (
 	"fmt"
-	"net"
 	"net/http"
-	"net/netip"
 	"sync"
 	"time"
 
@@ -38,13 +36,8 @@ type limiterEntry struct {
 	lastSeen time.Time
 }
 
-type ipRateLimiter struct {
-	limit rate.Limit
-	burst int
-
-	mu          sync.Mutex
-	entries     map[netip.Addr]limiterEntry
-	nextCleanup time.Time
+type globalRateLimiter struct {
+	limiter *rate.Limiter
 }
 
 func NewUserRateLimiter(limit rate.Limit, burst int) (*userRateLimiter, error) {
@@ -88,7 +81,7 @@ func (limiter *userRateLimiter) Allow(userID uuid.UUID) bool {
 	return entry.limiter.Allow()
 }
 
-func NewIPRateLimiter(limit rate.Limit, burst int) (*ipRateLimiter, error) {
+func NewGlobalRateLimiter(limit rate.Limit, burst int) (*globalRateLimiter, error) {
 	if limit <= 0 {
 		return nil, fmt.Errorf("rate limit must be positive")
 	}
@@ -96,37 +89,13 @@ func NewIPRateLimiter(limit rate.Limit, burst int) (*ipRateLimiter, error) {
 		return nil, fmt.Errorf("rate limit burst must be positive")
 	}
 
-	return &ipRateLimiter{
-		limit:   limit,
-		burst:   burst,
-		entries: make(map[netip.Addr]limiterEntry),
+	return &globalRateLimiter{
+		limiter: rate.NewLimiter(limit, burst),
 	}, nil
 }
 
-func (limiter *ipRateLimiter) Allow(clientIP netip.Addr) bool {
-	now := time.Now()
-
-	limiter.mu.Lock()
-	defer limiter.mu.Unlock()
-
-	if now.After(limiter.nextCleanup) {
-		for ip, entry := range limiter.entries {
-			if now.Sub(entry.lastSeen) >= limiterEntryTTL {
-				delete(limiter.entries, ip)
-			}
-		}
-		limiter.nextCleanup = now.Add(limiterCleanupInterval)
-	}
-
-	entry, exists := limiter.entries[clientIP]
-	if !exists {
-		entry.limiter = rate.NewLimiter(limiter.limit, limiter.burst)
-	}
-
-	entry.lastSeen = now
-	limiter.entries[clientIP] = entry
-
-	return entry.limiter.Allow()
+func (limiter *globalRateLimiter) Allow() bool {
+	return limiter.limiter.Allow()
 }
 
 func RateLimit(l limiter) gin.HandlerFunc {
@@ -158,33 +127,9 @@ func RateLimit(l limiter) gin.HandlerFunc {
 	}
 }
 
-func IPRateLimit(l *ipRateLimiter) gin.HandlerFunc {
+func GlobalRateLimit(l *globalRateLimiter) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		host, _, err := net.SplitHostPort(c.Request.RemoteAddr)
-		if err != nil {
-			httperror.WriteError(
-				c,
-				http.StatusBadRequest,
-				httperror.CodeInvalidRequest,
-				"invalid client IP address",
-			)
-			c.Abort()
-			return
-		}
-
-		clientIP, err := netip.ParseAddr(host)
-		if err != nil {
-			httperror.WriteError(
-				c,
-				http.StatusBadRequest,
-				httperror.CodeInvalidRequest,
-				"invalid client IP address",
-			)
-			c.Abort()
-			return
-		}
-
-		if !l.Allow(clientIP) {
+		if !l.Allow() {
 			httperror.WriteError(
 				c,
 				http.StatusTooManyRequests,

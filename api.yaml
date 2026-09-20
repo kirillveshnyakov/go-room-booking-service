@@ -152,7 +152,6 @@ components:
 
     ScheduleRule:
       type: object
-      additionalProperties: false
       required:
         - dayOfWeek
         - startTime
@@ -179,7 +178,6 @@ components:
 
     CreateScheduleRequest:
       type: object
-      additionalProperties: false
       required:
         - rules
       properties:

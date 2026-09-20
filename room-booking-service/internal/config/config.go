@@ -46,8 +46,8 @@ type (
 		AccessTokenTTL      time.Duration `env:"ACCESS_TOKEN_TTL" envDefault:"15m"`
 		SessionTTL          time.Duration `env:"SESSION_TTL" envDefault:"720h"`
 
-		AuthRateLimit      float64 `env:"HTTP_AUTH_RATE_LIMIT" envDefault:"5"`
-		AuthRateLimitBurst int     `env:"HTTP_AUTH_RATE_LIMIT_BURST" envDefault:"10"`
+		AuthRateLimit      float64 `env:"HTTP_AUTH_RATE_LIMIT" envDefault:"100"`
+		AuthRateLimitBurst int     `env:"HTTP_AUTH_RATE_LIMIT_BURST" envDefault:"100"`
 
 		RefreshCookieName     string `env:"REFRESH_COOKIE_NAME" envDefault:"refresh_token"`
 		RefreshCookiePath     string `env:"REFRESH_COOKIE_PATH" envDefault:"/"`
