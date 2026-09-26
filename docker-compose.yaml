@@ -3,24 +3,66 @@ services:
     image: postgres:17
     container_name: meeting_rooms_postgres
     restart: unless-stopped
-
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-meeting_rooms}
       POSTGRES_USER: ${POSTGRES_USER:-meeting_rooms_user}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-12345}
-
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
-
     volumes:
       - postgres_data:/var/lib/postgresql
-
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 10
       start_period: 10s
+
+  migrate:
+    build:
+      context: ./room-booking-service
+      dockerfile: Dockerfile
+    image: room-booking-service:local
+    entrypoint: ["/usr/local/bin/migrate"]
+    restart: "no"
+    environment:
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: ${POSTGRES_DB:-meeting_rooms}
+      POSTGRES_USER: ${POSTGRES_USER:-meeting_rooms_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-12345}
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  app:
+    build:
+      context: ./room-booking-service
+      dockerfile: Dockerfile
+    image: room-booking-service:local
+    restart: unless-stopped
+    environment:
+      HTTP_HOST: 0.0.0.0
+      HTTP_PORT: "8080"
+      POSTGRES_HOST: postgres
+      POSTGRES_PORT: "5432"
+      POSTGRES_DB: ${POSTGRES_DB:-meeting_rooms}
+      POSTGRES_USER: ${POSTGRES_USER:-meeting_rooms_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-12345}
+      LOGGER_LEVEL: ${LOGGER_LEVEL:-info}
+      LOGGER_ENVIRONMENT: ${LOGGER_ENVIRONMENT:-development}
+      LOGGER_SERVICE: ${LOGGER_SERVICE:-room-booking-service}
+      JWT_SECRET: ${JWT_SECRET:-local-development-jwt-secret-change-me-please}
+      ACCESS_TOKEN_ISSUER: ${ACCESS_TOKEN_ISSUER:-room-booking-service}
+      ACCESS_TOKEN_AUDIENCE: ${ACCESS_TOKEN_AUDIENCE:-room-booking-api}
+      REFRESH_COOKIE_SECURE: ${REFRESH_COOKIE_SECURE:-false}
+      ENABLE_DUMMY_LOGIN: ${ENABLE_DUMMY_LOGIN:-true}
+      CONFERENCE_BASE_URL: ${CONFERENCE_BASE_URL:-https://meet.example.com}
+    ports:
+      - "${HTTP_PORT:-8080}:8080"
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
 
 volumes:
   postgres_data:
