@@ -15,6 +15,7 @@ import (
 	"go.uber.org/zap"
 )
 
+//go:generate mockgen -source=auth.go -destination=mocks/auth_mocks.go -package=mocks
 type (
 	userRepository interface {
 		Create(ctx context.Context, email string, role entity.UserRole, passwordHash string) (entity.User, error)

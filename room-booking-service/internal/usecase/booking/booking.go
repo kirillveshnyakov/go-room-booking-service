@@ -14,6 +14,7 @@ import (
 	"go.uber.org/zap"
 )
 
+//go:generate mockgen -source=booking.go -destination=mocks/booking_mocks.go -package=mocks
 type (
 	bookingRepository interface {
 		Create(ctx context.Context, slotID uuid.UUID, userID uuid.UUID, conferenceLink string) (entity.Booking, error)
@@ -115,7 +116,7 @@ func (service *bookingService) List(
 	if pageSize < 1 || pageSize > maxPageSize {
 		return nil, 0, fmt.Errorf("booking usecase - list: validation error: %w", errs.ErrPaginationPageSizeInvalid)
 	}
-	if page < 1 || page > math.MaxInt/pageSize+1 {
+	if page < 1 || page - 1 > math.MaxInt/pageSize {
 		return nil, 0, fmt.Errorf("booking usecase - list: validation error: %w", errs.ErrPaginationPageInvalid)
 	}
 

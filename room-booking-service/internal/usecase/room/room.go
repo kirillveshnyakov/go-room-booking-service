@@ -12,6 +12,7 @@ import (
 	"go.uber.org/zap"
 )
 
+//go:generate mockgen -source=room.go -destination=mocks/room_mocks.go -package=mocks
 type (
 	roomRepository interface {
 		Create(ctx context.Context, room entity.Room) (entity.Room, error)

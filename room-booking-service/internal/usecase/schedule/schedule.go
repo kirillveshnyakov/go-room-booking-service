@@ -12,6 +12,7 @@ import (
 	"go.uber.org/zap"
 )
 
+//go:generate mockgen -source=schedule.go -destination=mocks/schedule_mocks.go -package=mocks
 type (
 	scheduleRepository interface {
 		Create(ctx context.Context, schedule entity.Schedule) (entity.Schedule, error)

@@ -13,6 +13,7 @@ import (
 	"go.uber.org/zap"
 )
 
+//go:generate mockgen -source=slot.go -destination=mocks/slot_mocks.go -package=mocks
 type (
 	slotRepository interface {
 		Create(ctx context.Context, roomID uuid.UUID, startAts []time.Time) error
