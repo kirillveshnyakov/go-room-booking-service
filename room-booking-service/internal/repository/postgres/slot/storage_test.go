@@ -9,7 +9,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/errs"
-	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/repository/postgres/testdb"
+	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/tests/util/testdb"
 	"github.com/stretchr/testify/require"
 )
 
