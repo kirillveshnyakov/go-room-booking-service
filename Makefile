@@ -28,7 +28,9 @@ test-unit: ## Запустить unit-тесты usecase-слоя.
 	cd room-booking-service && go test -v ./internal/usecase/... -count=1
 
 test-repository: ## Поднять тестовую PostgreSQL и запустить repository integration-тесты.
-	docker compose --profile test up -d --wait postgres-test
+	@set -e; \
+	trap 'docker compose --profile test stop postgres-test' EXIT; \
+	docker compose --profile test up -d --wait postgres-test; \
 	docker compose --profile test run --rm --no-deps -v "$$(go env GOMODCACHE):/go/pkg/mod:ro" repository-tests
 
 test-race: ## Запустить все тесты с race detector (нужны CGO и C-компилятор).
