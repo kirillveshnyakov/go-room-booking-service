@@ -21,7 +21,7 @@ type (
 		GetByID(ctx context.Context, bookingID uuid.UUID) (entity.Booking, error)
 		Cancel(ctx context.Context, bookingID uuid.UUID) error
 		List(ctx context.Context, pageLimit int, pageOffset int) ([]entity.Booking, int64, error)
-		ListUserFuture(ctx context.Context, userID uuid.UUID) ([]entity.Booking, error)
+		ListByUser(ctx context.Context, userID uuid.UUID) ([]entity.Booking, error)
 	}
 
 	conferenceLinkGenerator interface {
@@ -116,7 +116,7 @@ func (service *bookingService) List(
 	if pageSize < 1 || pageSize > maxPageSize {
 		return nil, 0, fmt.Errorf("booking usecase - list: validation error: %w", errs.ErrPaginationPageSizeInvalid)
 	}
-	if page < 1 || page - 1 > math.MaxInt/pageSize {
+	if page < 1 || page-1 > math.MaxInt/pageSize {
 		return nil, 0, fmt.Errorf("booking usecase - list: validation error: %w", errs.ErrPaginationPageInvalid)
 	}
 
@@ -144,14 +144,14 @@ func (service *bookingService) ListMy(
 		return nil, errs.ErrForbidden
 	}
 
-	list, err := service.bookingRepository.ListUserFuture(ctx, actor.UserID)
+	list, err := service.bookingRepository.ListByUser(ctx, actor.UserID)
 	if err != nil {
 		log.Error(
 			"user bookings list failed",
 			zap.Error(err),
 		)
 
-		return nil, fmt.Errorf("booking usecase - list user future: %w", err)
+		return nil, fmt.Errorf("booking usecase - list by user: %w", err)
 	}
 
 	return list, nil

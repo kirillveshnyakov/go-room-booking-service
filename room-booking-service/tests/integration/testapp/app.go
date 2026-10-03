@@ -5,6 +5,7 @@ import (
 	"net/http/cookiejar"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -43,6 +44,7 @@ func New(t *testing.T) *TestApp {
 
 	client := server.Client()
 	client.Jar = jar
+	client.Timeout = 10 * time.Second
 
 	return &TestApp{
 		Server: server,

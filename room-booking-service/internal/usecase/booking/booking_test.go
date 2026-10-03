@@ -312,7 +312,7 @@ func TestBookingService_ListMy(t *testing.T) {
 			repo := mocks.NewMockbookingRepository(ctrl)
 			link := mocks.NewMockconferenceLinkGenerator(ctrl)
 			if tt.wantErr == nil || tt.repoErr != nil {
-				repo.EXPECT().ListUserFuture(gomock.Any(), tt.actor.UserID).Return(tt.wantList, tt.repoErr)
+				repo.EXPECT().ListByUser(gomock.Any(), tt.actor.UserID).Return(tt.wantList, tt.repoErr)
 			}
 			service := NewBookingService(repo, link, zap.NewNop())
 			got, err := service.ListMy(context.Background(), tt.actor)

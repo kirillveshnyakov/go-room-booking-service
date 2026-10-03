@@ -43,7 +43,7 @@ ORDER BY created_at DESC, id DESC
 LIMIT sqlc.arg(page_limit)
 OFFSET sqlc.arg(page_offset);
 
--- name: ListUserFutureBookings :many
+-- name: ListBookingsByUser :many
 SELECT b.id,
        b.slot_id,
        b.user_id,
@@ -54,7 +54,6 @@ FROM bookings AS b
          JOIN slots AS s
               ON b.slot_id = s.id
 WHERE b.user_id = sqlc.arg(user_id)
-  AND s.start_at >= NOW()
 ORDER BY s.start_at, b.id;
 
 -- name: CountBookings :one

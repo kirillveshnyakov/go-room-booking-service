@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help postgres migrate app up down clean test test-unit test-repository test-race test-cover
+.PHONY: help postgres migrate app up down clean install-mockgen generate-mocks generate-sqlc test test-unit test-repository test-integration test-race test-cover
 
 help: ## Показать доступные команды.
 	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z_-]+:.*##/ {printf "%-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -21,6 +21,15 @@ up: ## Собрать и запустить PostgreSQL, миграции и API 
 down: ## Остановить и удалить контейнеры, сохранив данные PostgreSQL.
 	docker compose down --remove-orphans
 
+install-mockgen: ## Установить mockgen версии, используемой в проекте.
+	cd room-booking-service && go install go.uber.org/mock/mockgen@v0.6.0
+
+generate-mocks: ## Перегенерировать моки usecase-слоя (требуется mockgen в PATH).
+	cd room-booking-service && go generate ./internal/usecase/...
+
+generate-sqlc: ## Перегенерировать PostgreSQL-код из SQL (требуется sqlc в PATH).
+	cd room-booking-service && sqlc generate
+
 test: ## Запустить тесты без PostgreSQL repository-набора и кеширования результатов.
 	cd room-booking-service && go test -v ./... -count=1
 
@@ -32,6 +41,12 @@ test-repository: ## Поднять тестовую PostgreSQL и запусти
 	trap 'docker compose --profile test stop postgres-test' EXIT; \
 	docker compose --profile test up -d --wait postgres-test; \
 	docker compose --profile test run --rm --no-deps -v "$$(go env GOMODCACHE):/go/pkg/mod:ro" repository-tests
+
+test-integration: ## Поднять тестовую PostgreSQL и запустить HTTP integration-тесты.
+	@set -e; \
+	trap 'docker compose --profile test stop postgres-test' EXIT; \
+	docker compose --profile test up -d --wait postgres-test; \
+	docker compose --profile test run --rm --no-deps -v "$$(go env GOMODCACHE):/go/pkg/mod:ro" repository-tests go test -v ./tests/integration/... -count=1
 
 test-race: ## Запустить все тесты с race detector (нужны CGO и C-компилятор).
 	cd room-booking-service && CGO_ENABLED=1 go test -v -race ./... -count=1

@@ -147,7 +147,7 @@ func (q *Queries) ListBookings(ctx context.Context, arg ListBookingsParams) ([]B
 	return items, nil
 }
 
-const listUserFutureBookings = `-- name: ListUserFutureBookings :many
+const listBookingsByUser = `-- name: ListBookingsByUser :many
 SELECT b.id,
        b.slot_id,
        b.user_id,
@@ -158,12 +158,11 @@ FROM bookings AS b
          JOIN slots AS s
               ON b.slot_id = s.id
 WHERE b.user_id = $1
-  AND s.start_at >= NOW()
 ORDER BY s.start_at, b.id
 `
 
-func (q *Queries) ListUserFutureBookings(ctx context.Context, userID uuid.UUID) ([]Booking, error) {
-	rows, err := q.db.Query(ctx, listUserFutureBookings, userID)
+func (q *Queries) ListBookingsByUser(ctx context.Context, userID uuid.UUID) ([]Booking, error) {
+	rows, err := q.db.Query(ctx, listBookingsByUser, userID)
 	if err != nil {
 		return nil, err
 	}

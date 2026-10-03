@@ -102,19 +102,19 @@ func (mr *MockbookingRepositoryMockRecorder) List(ctx, pageLimit, pageOffset any
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "List", reflect.TypeOf((*MockbookingRepository)(nil).List), ctx, pageLimit, pageOffset)
 }
 
-// ListUserFuture mocks base method.
-func (m *MockbookingRepository) ListUserFuture(ctx context.Context, userID uuid.UUID) ([]entity.Booking, error) {
+// ListByUser mocks base method.
+func (m *MockbookingRepository) ListByUser(ctx context.Context, userID uuid.UUID) ([]entity.Booking, error) {
 	m.ctrl.T.Helper()
-	ret := m.ctrl.Call(m, "ListUserFuture", ctx, userID)
+	ret := m.ctrl.Call(m, "ListByUser", ctx, userID)
 	ret0, _ := ret[0].([]entity.Booking)
 	ret1, _ := ret[1].(error)
 	return ret0, ret1
 }
 
-// ListUserFuture indicates an expected call of ListUserFuture.
-func (mr *MockbookingRepositoryMockRecorder) ListUserFuture(ctx, userID any) *gomock.Call {
+// ListByUser indicates an expected call of ListByUser.
+func (mr *MockbookingRepositoryMockRecorder) ListByUser(ctx, userID any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListUserFuture", reflect.TypeOf((*MockbookingRepository)(nil).ListUserFuture), ctx, userID)
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListByUser", reflect.TypeOf((*MockbookingRepository)(nil).ListByUser), ctx, userID)
 }
 
 // MockconferenceLinkGenerator is a mock of conferenceLinkGenerator interface.

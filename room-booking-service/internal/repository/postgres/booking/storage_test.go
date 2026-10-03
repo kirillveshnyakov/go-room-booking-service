@@ -98,7 +98,7 @@ func TestBookingRepository_ListPagination(t *testing.T) {
 	require.Equal(t, ids[0], second[0].ID)
 }
 
-func TestBookingRepository_ListUserFuture(t *testing.T) {
+func TestBookingRepository_ListByUser(t *testing.T) {
 	db := testdb.New(t)
 	ctx := context.Background()
 	repo := NewBookingRepository(db.Pool, transactor.NewTransactor(db.Pool))
@@ -108,14 +108,15 @@ func TestBookingRepository_ListUserFuture(t *testing.T) {
 	futureLate := db.Slot(roomID, now.Add(48*time.Hour))
 	futureEarly := db.Slot(roomID, now.Add(24*time.Hour))
 	otherSlot := db.Slot(roomID, now.Add(72*time.Hour))
-	db.Booking(past, userID, "active", now)
+	pastID := db.Booking(past, userID, "active", now)
 	lateID := db.Booking(futureLate, userID, "active", now)
 	earlyID := db.Booking(futureEarly, userID, "cancelled", now)
 	db.Booking(otherSlot, otherID, "active", now)
 
-	got, err := repo.ListUserFuture(ctx, userID)
+	got, err := repo.ListByUser(ctx, userID)
 	require.NoError(t, err)
-	require.Len(t, got, 2)
-	require.Equal(t, []uuid.UUID{earlyID, lateID}, []uuid.UUID{got[0].ID, got[1].ID})
-	require.Equal(t, entity.BookingStatusCancelled, got[0].Status)
+	require.Len(t, got, 3)
+	require.Equal(t, []uuid.UUID{pastID, earlyID, lateID}, []uuid.UUID{got[0].ID, got[1].ID, got[2].ID})
+	require.Equal(t, entity.BookingStatusActive, got[0].Status)
+	require.Equal(t, entity.BookingStatusCancelled, got[1].Status)
 }

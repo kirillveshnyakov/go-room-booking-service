@@ -151,11 +151,11 @@ func (repo *bookingRepository) List(
 	return result, total, nil
 }
 
-func (repo *bookingRepository) ListUserFuture(
+func (repo *bookingRepository) ListByUser(
 	ctx context.Context,
 	userID uuid.UUID,
 ) ([]entity.Booking, error) {
-	bookings, err := repo.getQueries(ctx).ListUserFutureBookings(ctx, userID)
+	bookings, err := repo.getQueries(ctx).ListBookingsByUser(ctx, userID)
 	if err != nil {
 		return nil, fmt.Errorf("booking repository - list user future: %w", err)
 	}
