@@ -1,5 +1,3 @@
-//go:build repository_postgres
-
 package room
 
 import (

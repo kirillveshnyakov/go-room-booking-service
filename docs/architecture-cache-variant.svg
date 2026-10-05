@@ -1,0 +1,97 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1450 805" role="img" aria-labelledby="title desc">
+  <title id="title">Room Booking Service — архитектура с планируемым кешем</title>
+  <desc id="desc">Клиент обращается к HTTP API, usecase и repository одного Go-сервиса. Repository работает с PostgreSQL и в будущем будет обращаться к кешу Redis для данных БД. Goose применяет миграции к PostgreSQL. Kafka и отдельный сервис уведомлений запланированы и выделены пунктиром.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M1 1 L9 5 L1 9 Z" fill="#3b526f"/>
+    </marker>
+    <marker id="planned-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M1 1 L9 5 L1 9 Z" fill="#ba7c34"/>
+    </marker>
+    <style>
+      text { font-family: Inter, Arial, sans-serif; fill: #17263c; }
+      .heading { font-size: 30px; font-weight: 700; }
+      .subtitle { font-size: 15px; fill: #536781; }
+      .section { font-size: 17px; font-weight: 700; }
+      .title { font-size: 19px; font-weight: 700; text-anchor: middle; }
+      .detail { font-size: 13px; fill: #486078; text-anchor: middle; }
+      .small { font-size: 12px; fill: #64768d; text-anchor: middle; }
+      .flow { fill: none; stroke: #3b526f; stroke-width: 2.5; marker-end: url(#arrow); }
+      .planned-flow { fill: none; stroke: #ba7c34; stroke-width: 2.5; stroke-dasharray: 8 6; marker-end: url(#planned-arrow); }
+      .planned-stroke { stroke: #c99556; stroke-width: 1.7; stroke-dasharray: 7 5; }
+    </style>
+  </defs>
+
+  <rect width="1450" height="805" fill="#ffffff"/>
+  <text x="42" y="54" class="heading">Room Booking Service</text>
+  <text x="42" y="82" class="subtitle">Текущая система и планируемые Redis-кеш и асинхронные уведомления</text>
+  <path d="M1081 54 H1134" class="flow"/><text x="1147" y="59" class="subtitle">работает</text>
+  <path d="M1244 54 H1297" class="planned-flow"/><text x="1310" y="59" class="subtitle">план</text>
+
+  <rect x="261" y="157" width="758" height="470" rx="20" fill="#fbfcff" stroke="#bdcce0" stroke-width="1.6"/>
+  <text x="291" y="192" class="section">Go-сервис · Docker Compose</text>
+  <text x="291" y="219" class="subtitle">HTTP → бизнес-логика → хранилище</text>
+
+  <rect x="45" y="334" width="170" height="98" rx="15" fill="#f7f9fc" stroke="#75869d" stroke-width="1.6"/>
+  <text x="130" y="373" class="title">Клиент</text>
+  <text x="130" y="401" class="detail">HTTP</text>
+
+  <rect x="295" y="314" width="195" height="137" rx="15" fill="#e7f3e6" stroke="#77a673" stroke-width="1.6"/>
+  <text x="392" y="350" class="title">HTTP API</text>
+  <text x="392" y="379" class="detail">Gin · handlers</text>
+  <text x="392" y="404" class="detail">auth · роли · лимиты</text>
+  <text x="392" y="429" class="detail">logging · recovery</text>
+
+  <rect x="540" y="314" width="195" height="137" rx="15" fill="#e6efff" stroke="#7698c9" stroke-width="1.6"/>
+  <text x="637" y="350" class="title">Usecase</text>
+  <text x="637" y="379" class="detail">auth · room · schedule</text>
+  <text x="637" y="404" class="detail">slot · booking</text>
+  <text x="637" y="429" class="detail">правила и авторизация</text>
+
+  <rect x="785" y="314" width="195" height="137" rx="15" fill="#e6efff" stroke="#7698c9" stroke-width="1.6"/>
+  <text x="882" y="350" class="title">Repository</text>
+  <text x="882" y="379" class="detail">pgx · SQLC</text>
+  <text x="882" y="404" class="detail">транзакции</text>
+  <text x="882" y="429" class="detail">доступ к данным</text>
+
+  <rect x="540" y="504" width="440" height="82" rx="15" fill="#f1eff9" stroke="#9d8bbb" stroke-width="1.6"/>
+  <text x="760" y="535" class="title">Infra-адаптеры</text>
+  <text x="760" y="562" class="detail">JWT · bcrypt · refresh token · ссылки на конференции</text>
+
+  <path d="M215 383 H295" class="flow"/>
+  <path d="M490 383 H540" class="flow"/>
+  <path d="M735 383 H785" class="flow"/>
+  <path d="M637 451 V504" class="flow"/>
+
+  <rect x="1092" y="345" width="224" height="118" fill="#eee8f6" stroke="#9f84bb" stroke-width="1.7"/>
+  <ellipse cx="1204" cy="345" rx="112" ry="15" fill="#f8f3fb" stroke="#9f84bb" stroke-width="1.7"/>
+  <path d="M1092 463 A112 15 0 0 0 1316 463" fill="none" stroke="#9f84bb" stroke-width="1.7"/>
+  <text x="1204" y="396" class="title">PostgreSQL</text>
+  <text x="1204" y="425" class="detail">источник данных</text>
+  <path d="M980 383 H1092" class="flow"/>
+
+  <rect x="1092" y="195" width="224" height="105" fill="#fff0dc" class="planned-stroke"/>
+  <ellipse cx="1204" cy="195" rx="112" ry="15" fill="#fff8ed" class="planned-stroke"/>
+  <path d="M1092 300 A112 15 0 0 0 1316 300" fill="none" class="planned-stroke"/>
+  <text x="1204" y="239" class="title">Redis · кеш</text>
+  <text x="1204" y="268" class="detail">данных PostgreSQL</text>
+  <path d="M882 314 V248 H1092" class="planned-flow"/>
+
+  <rect x="1125" y="511" width="158" height="66" rx="12" fill="#f8fafc" stroke="#879bb4" stroke-width="1.5"/>
+  <text x="1204" y="551" class="title" style="font-size:17px">Goose</text>
+  <path d="M1204 511 V476" class="flow"/>
+  <text x="1273" y="496" class="small">миграции</text>
+
+  <rect x="1060" y="666" width="155" height="86" fill="#fff0dc" class="planned-stroke"/>
+  <ellipse cx="1137.5" cy="666" rx="77.5" ry="13" fill="#fff8ed" class="planned-stroke"/>
+  <path d="M1060 752 A77.5 13 0 0 0 1215 752" fill="none" class="planned-stroke"/>
+  <text x="1137.5" y="706" class="title">Kafka</text>
+  <text x="1137.5" y="730" class="detail">события</text>
+  <rect x="1260" y="674" width="165" height="80" rx="13" fill="#fff0dc" class="planned-stroke"/>
+  <text x="1342.5" y="708" class="title" style="font-size:16px">Сервис</text>
+  <text x="1342.5" y="732" class="detail">уведомлений</text>
+  <path d="M1019 601 H1035 V709 H1060" class="planned-flow"/>
+  <path d="M1215 709 H1260" class="planned-flow"/>
+
+  <text x="44" y="779" class="subtitle">Пунктиром выделены будущие компоненты; Redis не связан с PostgreSQL напрямую — кешем управляет Repository.</text>
+</svg>

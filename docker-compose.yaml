@@ -12,7 +12,7 @@ services:
       timeout: 2s
       retries: 20
 
-  repository-tests:
+  go-tests:
     image: golang:1.26.4
     profiles: ["test"]
     working_dir: /src
@@ -21,7 +21,7 @@ services:
     environment:
       GOPROXY: "off"
       TEST_DATABASE_URL: postgres://room_booking_test:local_test_password@postgres-test:5432/room_booking_test?sslmode=disable
-    command: ["go", "test", "-v", "-tags=repository_postgres", "./internal/repository/postgres/...", "-count=1"]
+    command: ["go", "test", "-v", "./...", "-count=1"]
 
   postgres:
     image: postgres:17

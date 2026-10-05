@@ -1,0 +1,103 @@
+name: Tests
+
+on:
+  workflow_dispatch:
+    inputs:
+      category:
+        description: Test category to run
+        required: true
+        type: choice
+        default: all
+        options:
+          - all
+          - unit
+          - repository
+          - integration
+          - concurrency
+          - race
+          - cover
+
+jobs:
+  select-categories:
+    runs-on: ubuntu-latest
+    outputs:
+      categories: ${{ steps.select.outputs.categories }}
+    steps:
+      - name: Select categories
+        id: select
+        env:
+          SELECTED_CATEGORY: ${{ inputs.category }}
+        run: |
+          if [ "$SELECTED_CATEGORY" = all ]; then
+            echo 'categories=["unit","repository","integration","concurrency","race","cover"]' >> "$GITHUB_OUTPUT"
+          else
+            printf 'categories=["%s"]\n' "$SELECTED_CATEGORY" >> "$GITHUB_OUTPUT"
+          fi
+
+  tests:
+    name: Tests / ${{ matrix.category }}
+    needs: select-categories
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        category: ${{ fromJSON(needs.select-categories.outputs.categories) }}
+
+    services:
+      postgres:
+        image: postgres:17
+
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: room_booking_test
+
+        ports:
+          - 5432:5432
+
+        options: >-
+          --health-cmd "pg_isready -U postgres -d room_booking_test"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      TEST_DATABASE_URL: postgres://postgres:postgres@localhost:5432/room_booking_test?sslmode=disable
+
+    defaults:
+      run:
+        working-directory: room-booking-service
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: room-booking-service/go.mod
+          cache-dependency-path: room-booking-service/go.sum
+
+      - name: Run tests
+        id: run-tests
+        env:
+          TEST_CATEGORY: ${{ matrix.category }}
+        run: |
+          case "$TEST_CATEGORY" in
+            unit)        go test -v ./internal/usecase/... -count=1 ;;
+            repository)  go test -v ./internal/repository/postgres/... -count=1 ;;
+            integration) go test -v ./tests/integration/... -count=1 ;;
+            concurrency) go test -v -race -run '^TestConcurrency_' ./internal/repository/postgres/... -count=100 ;;
+            race)        go test -v -race ./... -count=1 ;;
+            cover)       go test -v ./... -cover -count=1 ;;
+            *)           echo "Unknown test category: $TEST_CATEGORY" >&2; exit 1 ;;
+          esac
+
+      - name: Category result
+        if: always()
+        working-directory: .
+        env:
+          TEST_CATEGORY: ${{ matrix.category }}
+          TEST_RESULT: ${{ steps.run-tests.outcome }}
+        run: |
+          printf '### %s: %s\n' "$TEST_CATEGORY" "$TEST_RESULT" >> "$GITHUB_STEP_SUMMARY"
