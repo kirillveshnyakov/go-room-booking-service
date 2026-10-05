@@ -4,6 +4,7 @@ package booking
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
@@ -119,4 +120,54 @@ func TestBookingRepository_ListByUser(t *testing.T) {
 	require.Equal(t, []uuid.UUID{pastID, earlyID, lateID}, []uuid.UUID{got[0].ID, got[1].ID, got[2].ID})
 	require.Equal(t, entity.BookingStatusActive, got[0].Status)
 	require.Equal(t, entity.BookingStatusCancelled, got[1].Status)
+}
+
+func TestConcurrency_BookingRepositoryCreateSameSlot(t *testing.T) {
+	db := testdb.New(t)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+
+	repo := NewBookingRepository(db.Pool, transactor.NewTransactor(db.Pool))
+
+	roomID, userAID, userBID := db.Room(), db.User(), db.User()
+	slotID := db.Slot(roomID, time.Now().UTC().Add(24*time.Hour))
+
+	start := make(chan struct{})
+	result := make(chan error, 2)
+
+	go func() {
+		<-start
+		_, err := repo.Create(ctx, slotID, userAID, "")
+		result <- err
+	}()
+
+	go func() {
+		<-start
+		_, err := repo.Create(ctx, slotID, userBID, "")
+		result <- err
+	}()
+
+	close(start)
+
+	successCount := 0
+	failCount := 0
+
+	for i := 0; i < 2; i++ {
+		select {
+		case err := <-result:
+			if err != nil && errors.Is(err, errs.ErrSlotAlreadyBooked) {
+				failCount++
+			} else if err == nil {
+				successCount++
+			} else {
+				t.Fatalf("Unexpected error from Create: %s", err)
+			}
+		case <-ctx.Done():
+			t.Fatalf("Timed out waiting for Create result")
+		}
+	}
+
+	require.Equal(t, 1, successCount)
+	require.Equal(t, 1, failCount)
 }

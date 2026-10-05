@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help postgres migrate app up down clean install-mockgen generate-mocks generate-sqlc test test-unit test-repository test-integration test-race test-cover
+.PHONY: help postgres migrate app up down clean install-mockgen generate-mocks generate-sqlc test test-unit test-repository test-concurrency test-integration test-race test-cover
 
 help: ## Показать доступные команды.
 	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z_-]+:.*##/ {printf "%-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -41,6 +41,12 @@ test-repository: ## Поднять тестовую PostgreSQL и запусти
 	trap 'docker compose --profile test stop postgres-test' EXIT; \
 	docker compose --profile test up -d --wait postgres-test; \
 	docker compose --profile test run --rm --no-deps -v "$$(go env GOMODCACHE):/go/pkg/mod:ro" repository-tests
+
+test-concurrency: ## Запустить конкурентные repository-тесты с race detector.
+	@set -e; \
+	trap 'docker compose --profile test stop postgres-test' EXIT; \
+	docker compose --profile test up -d --wait postgres-test; \
+	docker compose --profile test run --rm --no-deps -v "$$(go env GOMODCACHE):/go/pkg/mod:ro" repository-tests go test -v -race -tags=repository_postgres -run '^TestConcurrency_' ./internal/repository/postgres/... -count=100
 
 test-integration: ## Поднять тестовую PostgreSQL и запустить HTTP integration-тесты.
 	@set -e; \
