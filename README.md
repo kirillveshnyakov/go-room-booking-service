@@ -145,7 +145,7 @@ make test
 | `make postgres` / `make migrate` | Поднять только PostgreSQL / поднять её и применить миграции. |
 | `make down` | Остановить стек, сохранив данные PostgreSQL. |
 | `make clean` | Остановить стек и **удалить volume с данными PostgreSQL**. |
-| `make test` / `make test-unit` | Запустить все тесты с тестовой БД / только unit-тесты usecase без БД. |
+| `make test` / `make test-unit` | Запустить все тесты с тестовой БД / unit-тесты usecase и infra без БД. |
 | `make test-repository` / `make test-integration` | Запустить repository-тесты / HTTP integration и E2E-тесты. |
 | `make test-concurrency` | Повторить конкурентные repository-тесты 100 раз с race detector. |
 | `make test-race` / `make test-cover` | Запустить весь набор с race detector / вывести покрытие по пакетам. |
@@ -155,7 +155,7 @@ make test
 
 ## Тестирование
 
-- **Unit:** табличные тесты usecase-сервисов `auth`, `room`, `schedule`, `slot` и `booking` с моками зависимостей.
+- **Unit:** табличные тесты usecase-сервисов `auth`, `room`, `schedule`, `slot` и `booking` с моками зависимостей, а также тесты in-memory кеша.
 - **Repository integration:** реальные PostgreSQL, миграции, SQL-запросы, ограничения БД, преобразование ошибок, выборки и транзакционные свойства.
 - **HTTP integration/E2E:** запросы через `httptest.Server` и настоящий стек middleware → handlers → usecases → PostgreSQL; проверяются auth, роли, комнаты, слоты и бронирования.
 - **Конкурентность:** одновременная попытка забронировать один слот; отдельно доступны прогоны с `-race` и вывод покрытия.

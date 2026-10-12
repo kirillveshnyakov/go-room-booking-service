@@ -36,8 +36,8 @@ test: ## Поднять тестовую PostgreSQL и запустить все
 	$(MAKE) test-db-up; \
 	docker compose --profile test run --rm --no-deps -v "$$(go env GOMODCACHE):/go/pkg/mod:ro" go-tests go test -v ./... -count=1
 
-test-unit: ## Запустить unit-тесты usecase-слоя.
-	cd room-booking-service && go test -v ./internal/usecase/... -count=1
+test-unit: ## Запустить unit-тесты usecase и infra без тестовой БД.
+	cd room-booking-service && go test -v ./internal/usecase/... ./internal/infra/... -count=1
 
 test-db-up: ## Поднять тестовую PostgreSQL и дождаться её готовности.
 	docker compose --profile test up -d --wait postgres-test
