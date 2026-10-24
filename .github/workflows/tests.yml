@@ -13,6 +13,7 @@ on:
           - unit
           - repository
           - integration
+          - redis
           - concurrency
           - race
           - cover
@@ -29,7 +30,7 @@ jobs:
           SELECTED_CATEGORY: ${{ inputs.category }}
         run: |
           if [ "$SELECTED_CATEGORY" = all ]; then
-            echo 'categories=["unit","repository","integration","concurrency","race","cover"]' >> "$GITHUB_OUTPUT"
+            echo 'categories=["unit","repository","integration","redis","concurrency","race","cover"]' >> "$GITHUB_OUTPUT"
           else
             printf 'categories=["%s"]\n' "$SELECTED_CATEGORY" >> "$GITHUB_OUTPUT"
           fi
@@ -45,7 +46,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:17
+        image: ${{ matrix.category != 'redis' && 'postgres:17' || '' }}
 
         env:
           POSTGRES_USER: postgres
@@ -87,6 +88,7 @@ jobs:
             unit)        go test -v ./internal/usecase/... -count=1 ;;
             repository)  go test -v ./internal/repository/postgres/... -count=1 ;;
             integration) go test -v ./tests/integration/... -count=1 ;;
+            redis)       go test -v -race -tags=integration ./internal/infra/cache/redis/... -count=1 ;;
             concurrency) go test -v -race -run '^TestConcurrency_' ./internal/repository/postgres/... -count=100 ;;
             race)        go test -v -race ./... -count=1 ;;
             cover)       go test -v ./... -cover -count=1 ;;
