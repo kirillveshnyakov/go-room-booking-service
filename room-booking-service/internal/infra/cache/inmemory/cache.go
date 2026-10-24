@@ -5,6 +5,8 @@ import (
 	"time"
 )
 
+const UseDefaultTTL time.Duration = -1
+
 type element[K comparable, V any] struct {
 	key        K
 	value      V
@@ -111,7 +113,7 @@ func (c *Cache[K, V]) Set(key K, value V, ttl time.Duration) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if ttl <= 0 {
+	if ttl < 0 {
 		ttl = c.defaultTTL
 	}
 	var expiration time.Time

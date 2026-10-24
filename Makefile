@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help postgres migrate app up down clean install-mockgen generate-mocks generate-sqlc test test-unit test-db-up test-db-down test-repository test-concurrency test-integration test-race test-cover
+.PHONY: help postgres migrate app up down clean install-mockgen generate-mocks generate-sqlc test test-unit test-db-up test-db-down test-repository test-concurrency test-integration test-redis test-race test-cover
 
 help: ## Показать доступные команды.
 	@awk 'BEGIN {FS = ":.*##"} /^[a-zA-Z_-]+:.*##/ {printf "%-18s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -62,6 +62,9 @@ test-integration: ## Поднять тестовую PostgreSQL и запуст�
 	trap '$(MAKE) test-db-down' EXIT; \
 	$(MAKE) test-db-up; \
 	docker compose --profile test run --rm --no-deps -v "$$(go env GOMODCACHE):/go/pkg/mod:ro" go-tests go test -v ./tests/integration/... -count=1
+
+test-redis: ## Запустить Redis integration-тесты через Testcontainers.
+	docker compose --profile test run --rm --no-deps -v "$$(go env GOMODCACHE):/go/pkg/mod:ro" -v /var/run/docker.sock:/var/run/docker.sock go-tests go test -v -tags=integration ./internal/infra/cache/redis/... -count=1
 
 test-race: ## Поднять тестовую PostgreSQL и запустить все тесты с race detector.
 	@set -e; \

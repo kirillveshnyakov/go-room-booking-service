@@ -46,9 +46,9 @@ func TestCacheWithoutDefaultTTL(t *testing.T) {
 	)
 	t.Cleanup(cache.Close)
 
-	cache.Set("permanent", 1, 0)
-	cache.Set("temporary", 2, time.Millisecond)
-	time.Sleep(10 * time.Millisecond)
+	cache.Set("permanent", 1, UseDefaultTTL)
+	cache.Set("temporary", 2, 100*time.Millisecond)
+	time.Sleep(150 * time.Millisecond)
 
 	if value, ok := cache.Get("permanent"); !ok || value != 1 {
 		t.Fatalf("permanent entry = (%d, %t), want (1, true)", value, ok)
@@ -59,22 +59,33 @@ func TestCacheWithoutDefaultTTL(t *testing.T) {
 }
 
 func TestCachePeriodicCleanupAndClose(t *testing.T) {
-	cache := New[string, int](WithGCInterval[string, int](5 * time.Millisecond))
+	cache := New[string, int](
+		WithDefaultTTL[string, int](100*time.Millisecond),
+		WithGCInterval[string, int](10*time.Millisecond),
+	)
 	t.Cleanup(cache.Close)
 
-	cache.Set("expired", 1, time.Millisecond)
-	deadline := time.Now().Add(time.Second)
+	cache.Set("expired", 1, UseDefaultTTL)
+	cache.Set("permanent", 2, 0)
+	deadline := time.Now().Add(2 * time.Second)
 	for {
 		cache.mu.Lock()
-		remaining := len(cache.kv)
+		_, expiredPresent := cache.kv["expired"]
+		_, permanentPresent := cache.kv["permanent"]
 		cache.mu.Unlock()
-		if remaining == 0 {
+		if !permanentPresent {
+			t.Fatal("periodic cleanup removed a permanent entry")
+		}
+		if !expiredPresent {
 			break
 		}
 		if time.Now().After(deadline) {
 			t.Fatal("periodic cleanup did not remove expired entry")
 		}
-		time.Sleep(5 * time.Millisecond)
+		time.Sleep(10 * time.Millisecond)
+	}
+	if value, ok := cache.Get("permanent"); !ok || value != 2 {
+		t.Fatalf("permanent entry after cleanup = (%d, %t), want (2, true)", value, ok)
 	}
 
 	cache.Close()
@@ -204,5 +215,60 @@ func TestConcurrentSameKey(t *testing.T) {
 	}
 	if cache.tail.prev != previous || count != len(cache.kv) {
 		t.Fatalf("linked list has %d elements, map has %d", count, len(cache.kv))
+	}
+}
+
+func TestSetTTLSemantics(t *testing.T) {
+	const shortTTL = 100 * time.Millisecond
+	tests := []struct {
+		name       string
+		defaultTTL time.Duration
+		ttl        time.Duration
+		update     bool
+		initialTTL time.Duration
+		wantTTL    time.Duration
+	}{
+		{name: "zero overrides default", defaultTTL: shortTTL, ttl: 0},
+		{name: "explicit TTL", defaultTTL: time.Hour, ttl: shortTTL, wantTTL: shortTTL},
+		{name: "temporary becomes permanent", defaultTTL: shortTTL, initialTTL: shortTTL, update: true, ttl: 0},
+		{name: "permanent becomes temporary", initialTTL: 0, update: true, ttl: shortTTL, wantTTL: shortTTL},
+		{name: "named default", defaultTTL: shortTTL, ttl: UseDefaultTTL, wantTTL: shortTTL},
+		{name: "other negative uses default", defaultTTL: shortTTL, ttl: -2 * time.Second, wantTTL: shortTTL},
+		{name: "zero default is permanent", defaultTTL: 0, ttl: UseDefaultTTL},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			t.Parallel()
+			cache := New[string, int](
+				WithDefaultTTL[string, int](test.defaultTTL),
+				WithGCInterval[string, int](0),
+			)
+			t.Cleanup(cache.Close)
+			if test.update {
+				cache.Set("key", 1, test.initialTTL)
+			}
+			before := time.Now()
+			cache.Set("key", 2, test.ttl)
+			after := time.Now()
+			cache.mu.Lock()
+			expiration := cache.kv["key"].expiration
+			cache.mu.Unlock()
+			if test.wantTTL == 0 {
+				if !expiration.IsZero() {
+					t.Fatalf("permanent entry has expiration %v", expiration)
+				}
+			} else if expiration.Before(before.Add(test.wantTTL)) || expiration.After(after.Add(test.wantTTL)) {
+				t.Fatalf("expiration %v does not match TTL %v", expiration, test.wantTTL)
+			}
+			time.Sleep(150 * time.Millisecond)
+			value, ok := cache.Get("key")
+			if test.wantTTL == 0 {
+				if !ok || value != 2 {
+					t.Fatalf("permanent entry = (%d, %t), want (2, true)", value, ok)
+				}
+			} else if ok {
+				t.Fatal("expired entry is still available")
+			}
+		})
 	}
 }
