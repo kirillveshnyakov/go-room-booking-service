@@ -32,6 +32,17 @@ type (
 		Password string `env:"POSTGRES_PASSWORD" envDefault:"12345"`
 	}
 
+	RedisConfig struct {
+		Host         string        `env:"REDIS_HOST" envDefault:"localhost"`
+		Port         string        `env:"REDIS_PORT" envDefault:"6379"`
+		Username     string        `env:"REDIS_USERNAME"`
+		Password     string        `env:"REDIS_PASSWORD"`
+		DB           int           `env:"REDIS_DB" envDefault:"0"`
+		DialTimeout  time.Duration `env:"REDIS_DIAL_TIMEOUT" envDefault:"1s"`
+		ReadTimeout  time.Duration `env:"REDIS_READ_TIMEOUT" envDefault:"500ms"`
+		WriteTimeout time.Duration `env:"REDIS_WRITE_TIMEOUT" envDefault:"500ms"`
+	}
+
 	LoggerConfig struct {
 		Level       string `env:"LOGGER_LEVEL" envDefault:"info"`
 		Environment string `env:"LOGGER_ENVIRONMENT" envDefault:"development"`
@@ -64,6 +75,7 @@ type (
 	Config struct {
 		HTTP       HTTPConfig
 		PG         PGConfig
+		Redis      RedisConfig
 		Logger     LoggerConfig
 		Auth       AuthConfig
 		Conference ConferenceConfig
@@ -71,6 +83,10 @@ type (
 )
 
 func (c *HTTPConfig) HTTPAddress() string {
+	return net.JoinHostPort(c.Host, c.Port)
+}
+
+func (c *RedisConfig) Address() string {
 	return net.JoinHostPort(c.Host, c.Port)
 }
 
@@ -155,6 +171,29 @@ func (c *PGConfig) Validate() error {
 		return fmt.Errorf("postgres password is required")
 	}
 
+	return nil
+}
+
+func (c *RedisConfig) Validate() error {
+	if strings.TrimSpace(c.Host) == "" {
+		return fmt.Errorf("redis host is required")
+	}
+	port, err := strconv.Atoi(c.Port)
+	if err != nil || port < 1 || port > 65535 {
+		return fmt.Errorf("redis port must be between 1 and 65535")
+	}
+	if c.DB < 0 {
+		return fmt.Errorf("redis database must be non-negative")
+	}
+	if c.DialTimeout <= 0 {
+		return fmt.Errorf("redis dial timeout must be positive")
+	}
+	if c.ReadTimeout <= 0 {
+		return fmt.Errorf("redis read timeout must be positive")
+	}
+	if c.WriteTimeout <= 0 {
+		return fmt.Errorf("redis write timeout must be positive")
+	}
 	return nil
 }
 
@@ -270,6 +309,10 @@ func (c *Config) Validate() error {
 
 	if err := c.PG.Validate(); err != nil {
 		return fmt.Errorf("validate postgres config: %w", err)
+	}
+
+	if err := c.Redis.Validate(); err != nil {
+		return fmt.Errorf("validate redis config: %w", err)
 	}
 
 	if err := c.Logger.Validate(); err != nil {

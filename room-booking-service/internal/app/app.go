@@ -13,6 +13,7 @@ import (
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/infra/httpserver"
 	loggerpkg "github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/infra/logger"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/infra/postgres"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 )
 
@@ -44,7 +45,35 @@ func Run(cfg *config.Config) error {
 	}
 	defer pool.Close()
 
-	handler, err := NewApplication(cfg, pool, logger)
+	redisClient := redis.NewClient(&redis.Options{
+		Addr:                  cfg.Redis.Address(),
+		Username:              cfg.Redis.Username,
+		Password:              cfg.Redis.Password,
+		DB:                    cfg.Redis.DB,
+		DialTimeout:           cfg.Redis.DialTimeout,
+		ReadTimeout:           cfg.Redis.ReadTimeout,
+		WriteTimeout:          cfg.Redis.WriteTimeout,
+		ContextTimeoutEnabled: true,
+		MaxRetries:            -1,
+		DialerRetries:         1,
+	})
+	defer func() {
+		if err := redisClient.Close(); err != nil {
+			logger.Warn("redis client close failed", zap.Error(err))
+		}
+	}()
+
+	redisPingCtx, cancelRedisPing := context.WithTimeout(ctx, cfg.Redis.DialTimeout)
+	redisPingErr := redisClient.Ping(redisPingCtx).Err()
+	cancelRedisPing()
+	if redisPingErr != nil {
+		if ctx.Err() != nil {
+			return fmt.Errorf("initialize redis client: %w", ctx.Err())
+		}
+		logger.Warn("redis unavailable at startup", zap.Error(redisPingErr))
+	}
+
+	handler, err := NewApplication(cfg, pool, redisClient, logger)
 	if err != nil {
 		return fmt.Errorf("initialize application: %w", err)
 	}

@@ -29,6 +29,14 @@ func newTestConfig() *config.Config {
 			Password: "12345",
 		},
 
+		Redis: config.RedisConfig{
+			Host:         "localhost",
+			Port:         "6379",
+			DialTimeout:  time.Second,
+			ReadTimeout:  500 * time.Millisecond,
+			WriteTimeout: 500 * time.Millisecond,
+		},
+
 		Logger: config.LoggerConfig{
 			Level:       "error",
 			Environment: "development",

@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/app"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/tests/util/testdb"
+	"github.com/redis/go-redis/v9"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 )
@@ -33,7 +34,10 @@ func New(t *testing.T) *TestApp {
 	cfg := newTestConfig()
 	require.NoError(t, cfg.Validate())
 
-	handler, err := app.NewApplication(cfg, db.Pool, logger)
+	closedRedisClient := redis.NewClient(&redis.Options{Addr: cfg.Redis.Address()})
+	require.NoError(t, closedRedisClient.Close())
+
+	handler, err := app.NewApplication(cfg, db.Pool, closedRedisClient, logger)
 	require.NoError(t, err)
 
 	server := httptest.NewServer(handler)

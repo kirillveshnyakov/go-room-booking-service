@@ -10,11 +10,13 @@ import (
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/controller/httpapi"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/controller/httpapi/handlers"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/controller/httpapi/middleware"
+	cacheRedis "github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/infra/cache/redis"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/infra/conference"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/infra/jwt"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/infra/password"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/infra/postgres/transactor"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/infra/refreshtoken"
+	roomCached "github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/repository/cached/room"
 	bookingDB "github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/repository/postgres/booking"
 	roomDB "github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/repository/postgres/room"
 	scheduleDB "github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/repository/postgres/schedule"
@@ -26,6 +28,7 @@ import (
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/usecase/room"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/usecase/schedule"
 	"github.com/kirillveshnyakov/go-room-booking-service/room-booking-service/internal/usecase/slot"
+	"github.com/redis/go-redis/v9"
 	"go.uber.org/zap"
 	"golang.org/x/time/rate"
 )
@@ -33,6 +36,7 @@ import (
 func NewApplication(
 	cfg *config.Config,
 	pool *pgxpool.Pool,
+	redisClient *redis.Client,
 	logger *zap.Logger,
 ) (http.Handler, error) {
 	txManager := transactor.NewTransactor(pool)
@@ -65,6 +69,13 @@ func NewApplication(
 	scheduleRepository := scheduleDB.NewScheduleRepository(pool, txManager)
 	sessionRepository := sessionDB.NewSessionRepository(pool)
 
+	redisCache, err := cacheRedis.NewRedisCache(redisClient)
+	if err != nil {
+		return nil, fmt.Errorf("initialize redis cache: %w", err)
+	}
+
+	cachedRoomRepository := roomCached.NewCachedRoomRepository(roomRepository, redisCache, logger)
+
 	authService := auth.NewAuthService(
 		userRepository,
 		sessionRepository,
@@ -75,13 +86,13 @@ func NewApplication(
 		logger,
 	)
 	roomService := room.NewRoomService(
-		roomRepository,
+		cachedRoomRepository,
 		logger,
 	)
 	slotService := slot.NewSlotService(
 		slotRepository,
 		scheduleRepository,
-		roomRepository,
+		cachedRoomRepository,
 		logger,
 	)
 	scheduleService := schedule.NewScheduleService(
